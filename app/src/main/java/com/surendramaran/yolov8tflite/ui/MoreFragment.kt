@@ -48,6 +48,12 @@ class MoreFragment : Fragment() {
         binding.root.findViewById<View>(R.id.btn_geofence)?.setOnClickListener {
             findNavController().navigate(R.id.geoFenceFragment)
         }
+
+        // AR Fish Measure
+        binding.root.findViewById<View>(R.id.btn_ar_measure)?.setOnClickListener {
+            val intent = android.content.Intent(requireContext(), com.surendramaran.yolov8tflite.ar.ArFishMeasureActivity::class.java)
+            startActivity(intent)
+        }
     }
 
     private fun showLanguageDialog() {
