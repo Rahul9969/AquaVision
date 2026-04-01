@@ -39,9 +39,9 @@
             android:id="@+id/status_card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="20dp"
+            android:layout_marginBottom="24dp"
             android:background="@drawable/bg_glass_card"
-            android:elevation="6dp"
+            android:elevation="8dp"
             android:orientation="vertical">
 
             <androidx.constraintlayout.widget.ConstraintLayout
@@ -104,8 +104,8 @@
                         android:layout_weight="1"
                         android:gravity="center"
                         android:orientation="vertical"
-                        android:padding="12dp"
-                        android:background="@drawable/bg_circle_translucent">
+                        android:padding="16dp"
+                        android:background="@drawable/bg_sub_card">
 
                         <TextView
                             android:id="@+id/distance_value"
@@ -134,8 +134,8 @@
                         android:layout_weight="1"
                         android:gravity="center"
                         android:orientation="vertical"
-                        android:padding="12dp"
-                        android:background="@drawable/bg_circle_translucent">
+                        android:padding="16dp"
+                        android:background="@drawable/bg_sub_card">
 
                         <TextView
                             android:id="@+id/coordinates_value"
@@ -166,7 +166,7 @@
                     android:textColor="#CFD8DC"
                     android:textSize="13sp"
                     android:lineSpacingExtra="4dp"
-                    android:background="@drawable/bg_circle_translucent"
+                    android:background="@drawable/bg_sub_card"
                     android:visibility="gone"
                     app:layout_constraintTop_toBottomOf="@id/distance_container"
                     app:layout_constraintStart_toStartOf="parent" />
@@ -322,48 +322,6 @@
                     android:text="❌ NOT authorized - Turn back!"
                     android:textColor="#EF9A9A"
                     android:textSize="12sp" />
-            </LinearLayout>
-        </LinearLayout>
-
-        <!-- OFFLINE BADGE -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:padding="16dp"
-            android:background="@drawable/bg_glass_card"
-            android:elevation="2dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="📡"
-                android:textSize="28sp" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="16dp"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="100% Offline Protection"
-                    android:textColor="@color/white"
-                    android:textSize="15sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="No internet needed. Uses GPS + pre-loaded Indian maritime boundaries for real-time zone detection."
-                    android:textColor="#B0BEC5"
-                    android:textSize="12sp"
-                    android:lineSpacingExtra="2dp" />
             </LinearLayout>
         </LinearLayout>
 

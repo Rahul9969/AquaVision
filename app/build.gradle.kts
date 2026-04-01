@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -22,6 +24,15 @@ android {
             // This removes x86 (emulator) and old 32-bit arm chips
             abiFilters.add("arm64-v8a")
         }
+
+        val localProps = Properties()
+        val localPropsFile = project.rootProject.file("local.properties")
+        if (localPropsFile.exists()) {
+            localProps.load(localPropsFile.inputStream())
+        }
+        buildConfigField("String", "CLOUDINARY_CLOUD_NAME", "\"${localProps.getProperty("CLOUDINARY_CLOUD_NAME", "")}\"")
+        buildConfigField("String", "CLOUDINARY_API_KEY", "\"${localProps.getProperty("CLOUDINARY_API_KEY", "")}\"")
+        buildConfigField("String", "CLOUDINARY_API_SECRET", "\"${localProps.getProperty("CLOUDINARY_API_SECRET", "")}\"")
     }
 
     buildTypes {
@@ -44,6 +55,7 @@ android {
     buildFeatures {
         viewBinding = true
         mlModelBinding = true
+        buildConfig = true
     }
 }
 

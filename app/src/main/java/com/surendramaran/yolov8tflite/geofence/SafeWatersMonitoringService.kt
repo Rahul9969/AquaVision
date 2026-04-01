@@ -52,8 +52,8 @@ class SafeWatersMonitoringService : Service() {
         const val ACTION_STOP = "com.surendramaran.yolov8tflite.STOP_SAFEWATERS"
 
         // Location update interval
-        private const val UPDATE_INTERVAL = 30000L        // 30 seconds
-        private const val FASTEST_INTERVAL = 15000L       // 15 seconds minimum
+        private const val UPDATE_INTERVAL = 10000L        // 10 seconds
+        private const val FASTEST_INTERVAL = 5000L        // 5 seconds minimum
 
         // Broadcast action for UI updates
         const val BROADCAST_LOCATION_UPDATE = "com.surendramaran.yolov8tflite.LOCATION_UPDATE"

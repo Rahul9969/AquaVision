@@ -187,14 +187,15 @@ class GeoFenceFragment : Fragment() {
                 val fusedClient = com.google.android.gms.location.LocationServices
                     .getFusedLocationProviderClient(requireContext())
 
-                fusedClient.lastLocation.addOnSuccessListener { location ->
-                    if (location != null && isAdded) {
-                        val checker = MaritimeBoundaryChecker(requireContext())
-                        val status = checker.checkLocation(location.latitude, location.longitude)
-                        val distance = checker.getDistanceToCoast(location.latitude, location.longitude)
-                        updateUI(status, location.latitude, location.longitude, distance)
+                fusedClient.getCurrentLocation(com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY, null)
+                    .addOnSuccessListener { location ->
+                        if (location != null && isAdded) {
+                            val checker = MaritimeBoundaryChecker(requireContext())
+                            val status = checker.checkLocation(location.latitude, location.longitude)
+                            val distance = checker.getDistanceToCoast(location.latitude, location.longitude)
+                            updateUI(status, location.latitude, location.longitude, distance)
+                        }
                     }
-                }
             } catch (e: Exception) {
                 // Silently fail - service broadcast will update the UI
             }
@@ -293,8 +294,8 @@ class GeoFenceFragment : Fragment() {
             statusTitle.text = status.displayName
             statusSubtitle.text = status.description
 
-            // Color the status card border based on zone
-            statusCard.backgroundTintList = android.content.res.ColorStateList.valueOf(
+            // Color the emoji background based on zone instead of the whole glass card
+            statusEmoji.backgroundTintList = android.content.res.ColorStateList.valueOf(
                 status.colorHex.toInt()
             )
 

@@ -19,9 +19,9 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
     private val dbHelper = DatabaseHelper(context)
     private val firestore by lazy { FirebaseFirestore.getInstance() }
 
-    private val CLOUD_NAME = "dvvvv5mwt"
-    private val API_KEY = "712361699253361"
-    private val API_SECRET = "SaKXxjE_ekI28s_C61Ns1-DtymA"
+    private val CLOUD_NAME = com.surendramaran.yolov8tflite.BuildConfig.CLOUDINARY_CLOUD_NAME
+    private val API_KEY = com.surendramaran.yolov8tflite.BuildConfig.CLOUDINARY_API_KEY
+    private val API_SECRET = com.surendramaran.yolov8tflite.BuildConfig.CLOUDINARY_API_SECRET
 
     override suspend fun doWork(): Result {
         return try {
