@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "219588971880",
+    "project_id": "fish-sih",
+    "storage_bucket": "fish-sih.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:219588971880:android:b4dc59f84e7f7b729edadd",
+        "android_client_info": {
+          "package_name": "com.surendramaran.yolov8tflite"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDNErNtv59lD5BSbTItvyi44008cf3TstE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

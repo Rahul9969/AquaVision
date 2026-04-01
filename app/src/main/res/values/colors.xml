@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="bounding_box_color">#234567</color>
+    <color name="gray">#999</color>
+    <color name="orange">#F93</color>
+
+    <color name="purple_500">#9C27B0</color>
+    <!--    Box colors-->
+    <color name="primary">#009688</color>
+    <color name="overlay_blue">#3F51B5</color>
+    <color name="overlay_green">#009688</color>
+    <color name="overlay_red">#E53935</color>
+    <color name="overlay_orange">#FF5722</color>
+    <color name="overlay_purple">#9C27B0</color>
+    <color name="overlay_pink">#C2185B</color>
+    <color name="overlay_cyan">#00BCD4</color>
+    <color name="overlay_gray">#607D8B</color>
+
+    <!-- Glass UI Colors -->
+    <color name="glass_white">#4DFFFFFF</color>
+    <color name="nav_selected">#FFFFFF</color>
+    <color name="nav_unselected">#80FFFFFF</color>
+</resources>

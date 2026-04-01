@@ -1,0 +1,573 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white">
+
+    <!-- Full-screen Map -->
+    <org.osmdroid.views.MapView
+        android:id="@+id/fishing_map"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- ═══ INCOIS-Style Top Panel (NO CardView — not in deps) ═══ -->
+    <LinearLayout
+        android:id="@+id/info_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="64dp"
+        android:layout_marginHorizontal="10dp"
+        android:layout_gravity="top"
+        android:orientation="vertical"
+        android:background="@drawable/bg_glass_card"
+        android:elevation="6dp"
+        android:visibility="gone">
+
+        <!-- Row 1: Date + FLC Info link + Refresh -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingStart="14dp"
+            android:paddingEnd="4dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="6dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tv_pfz_date"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="@color/white"
+                tools:text="22 Mar 2026" />
+
+            <TextView
+                android:id="@+id/tv_flc_info_link"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="FLC Information ›"
+                android:textSize="12sp"
+                android:textColor="#B0D4FF"
+                android:textStyle="bold"
+                android:paddingEnd="4dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_refresh"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:contentDescription="Refresh"
+                app:icon="@android:drawable/stat_notify_sync"
+                app:iconSize="18dp"
+                app:iconTint="@color/white" />
+        </LinearLayout>
+
+        <!-- Thin divider -->
+        <View android:layout_width="match_parent" android:layout_height="1dp"
+            android:background="#33FFFFFF" android:layout_marginHorizontal="14dp"/>
+
+        <!-- Row 2: Search Landing Centre -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingHorizontal="10dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="4dp"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@android:drawable/ic_menu_search"
+                app:tint="#B0D4FF" />
+
+            <AutoCompleteTextView
+                android:id="@+id/et_search_flc"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Search landing centre"
+                android:textSize="13sp"
+                android:textColor="@color/white"
+                android:textColorHint="#80FFFFFF"
+                android:background="@android:color/transparent"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="6dp"
+                android:imeOptions="actionSearch"
+                android:inputType="text"
+                android:dropDownWidth="match_parent" />
+        </LinearLayout>
+
+        <!-- Thin divider -->
+        <View android:layout_width="match_parent" android:layout_height="1dp"
+            android:background="#33FFFFFF" android:layout_marginHorizontal="14dp"/>
+
+        <!-- Row 3: Current FLC -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="14dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="4dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="CURRENT FISH LANDING CENTER (FLC):"
+                android:textSize="10sp"
+                android:textColor="#B0D4FF"
+                android:letterSpacing="0.05" />
+
+            <TextView
+                android:id="@+id/tv_current_flc"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/white"
+                android:layout_marginTop="2dp"
+                tools:text="Versova, MAHARASHTRA" />
+
+            <TextView
+                android:id="@+id/tv_forecast_available"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Forecast Available"
+                android:textSize="11sp"
+                android:textColor="#80FF80"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <!-- Row 4: Preferred FLC buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingHorizontal="10dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="8dp"
+            android:gravity="center_vertical">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_no_preferred_flc"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="34dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:text="NO PREFERRED FLC"
+                android:textSize="10sp"
+                app:strokeColor="#80FFFFFF"
+                android:textColor="#B0D4FF" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_set_preferred_flc"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="34dp"
+                android:layout_weight="1"
+                android:text="☆ SET PREFERRED FLC"
+                android:textSize="10sp"
+                app:strokeColor="#B0D4FF"
+                android:textColor="#B0D4FF" />
+        </LinearLayout>
+
+        <!-- Row 5: Layer toggle chips -->
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chip_group_layers"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="10dp"
+            android:paddingBottom="8dp"
+            app:singleSelection="false">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_hotspots"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Hotspots"
+                android:checked="true"
+                app:chipBackgroundColor="#4D81D4FA"
+                app:checkedIconVisible="true" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_sst"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="SST"
+                android:checked="true"
+                app:chipBackgroundColor="#4DFFB74D"
+                app:checkedIconVisible="true" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_chlorophyll"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Chlorophyll"
+                android:checked="false"
+                app:chipBackgroundColor="#4D81C784"
+                app:checkedIconVisible="true" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_flcs"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⚓ Ports"
+                android:checked="true"
+                app:chipBackgroundColor="#4D81D4FA"
+                app:checkedIconVisible="true" />
+        </com.google.android.material.chip.ChipGroup>
+    </LinearLayout>
+
+    <!-- Toggle Info Bar Button -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btn_toggle_info"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|start"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:src="@android:drawable/ic_menu_sort_by_size"
+        app:backgroundTint="@color/white"
+        app:tint="#0277BD"
+        app:fabSize="mini"
+        android:elevation="8dp"
+        android:contentDescription="Toggle Info Panel" />
+
+    <!-- FABs Container (End) -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:orientation="vertical"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        android:gravity="end">
+
+        <!-- Satellite View Toggle -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/btn_satellite_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:src="@android:drawable/ic_menu_mapmode"
+            app:backgroundTint="@color/white"
+            app:tint="#0277BD"
+            app:fabSize="mini"
+            android:contentDescription="Toggle Satellite View" />
+
+        <!-- Center on location -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/btn_center_location"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@android:drawable/ic_menu_mylocation"
+            app:backgroundTint="@color/white"
+            app:tint="#0277BD"
+            app:fabSize="normal"
+            android:contentDescription="Center map" />
+    </LinearLayout>
+
+    <!-- Loading Overlay -->
+    <FrameLayout
+        android:id="@+id/loading_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#88000020"
+        android:visibility="gone"
+        android:clickable="true"
+        android:focusable="true">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="32dp"
+            android:background="@drawable/bg_glass_card"
+            android:elevation="8dp">
+
+            <com.google.android.material.progressindicator.CircularProgressIndicator
+                android:id="@+id/progress_indicator"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:indeterminate="true"
+                app:indicatorColor="#4FC3F7"
+                app:trackCornerRadius="4dp" />
+
+            <TextView
+                android:id="@+id/tv_loading_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Loading..."
+                android:textColor="@color/white"
+                android:textSize="14sp" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <!-- ═══ Bottom Sheet: INCOIS Hotspot Detail ═══ -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/bottom_sheet"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/transparent"
+        app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior"
+        app:behavior_hideable="true"
+        app:behavior_peekHeight="0dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#FFFFFF"
+            android:elevation="16dp">
+
+            <!-- Handle bar -->
+            <View
+                android:layout_width="40dp"
+                android:layout_height="4dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="4dp"
+                android:background="#E0E0E0" />
+
+            <!-- ── INCOIS Direction / Bearing / Distance / Depth / Location ── -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="16dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="4dp">
+
+                <!-- Direction + Bearing -->
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:paddingVertical="8dp">
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="Direction:"
+                        android:textSize="14sp" android:textColor="#1565C0" android:textStyle="bold"/>
+                    <TextView android:id="@+id/tv_direction_value" android:layout_width="60dp"
+                        android:layout_height="wrap_content" android:textSize="14sp"
+                        android:textStyle="bold" android:textColor="#212121" tools:text="SW"/>
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="Bearing:"
+                        android:textSize="14sp" android:textColor="#1565C0" android:textStyle="bold"/>
+                    <TextView android:id="@+id/tv_bearing_value" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:textSize="14sp"
+                        android:textStyle="bold" android:textColor="#212121" tools:text="262 °"/>
+                </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#F0F0F0"/>
+
+                <!-- Distance -->
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="Distance:"
+                        android:textSize="14sp" android:textColor="#1565C0" android:textStyle="bold"/>
+                    <Spinner android:id="@+id/spinner_distance_unit" android:layout_width="90dp"
+                        android:layout_height="wrap_content" android:entries="@array/distance_units" android:textSize="13sp"/>
+                    <TextView android:id="@+id/tv_distance_value" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:textSize="16sp"
+                        android:textStyle="bold" android:textColor="#212121"
+                        android:layout_marginStart="8dp" tools:text="31"/>
+                </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#F0F0F0"/>
+
+                <!-- Sea Depth -->
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="Sea Depth In:"
+                        android:textSize="14sp" android:textColor="#1565C0" android:textStyle="bold"/>
+                    <Spinner android:id="@+id/spinner_depth_unit" android:layout_width="90dp"
+                        android:layout_height="wrap_content" android:entries="@array/depth_units" android:textSize="13sp"/>
+                    <TextView android:id="@+id/tv_depth_value" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:textSize="16sp"
+                        android:textStyle="bold" android:textColor="#212121"
+                        android:layout_marginStart="8dp" tools:text="25"/>
+                </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#F0F0F0"/>
+
+                <!-- Location in DMS -->
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:paddingVertical="8dp" android:gravity="center_vertical">
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="Location In:"
+                        android:textSize="14sp" android:textColor="#1565C0" android:textStyle="bold"/>
+                    <Spinner android:id="@+id/spinner_coord_unit" android:layout_width="90dp"
+                        android:layout_height="wrap_content" android:entries="@array/coord_units" android:textSize="13sp"/>
+                    <TextView android:id="@+id/tv_location_value" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:textSize="12sp"
+                        android:textStyle="bold" android:textColor="#212121"
+                        android:layout_marginStart="8dp" tools:text="18 32 18 N 72 37 35 E"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <View android:layout_width="match_parent" android:layout_height="6dp" android:background="#F5F5F5"/>
+
+            <!-- HSI Score + Confidence -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingHorizontal="16dp"
+                android:paddingTop="12dp"
+                android:paddingBottom="8dp"
+                android:gravity="center_vertical"
+                android:background="@drawable/bg_glass_card">
+
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:id="@+id/tv_hotspot_title" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:textSize="17sp"
+                        android:textStyle="bold" android:textColor="@color/white" tools:text="🐟 Fishing Hotspot"/>
+                    <TextView android:id="@+id/tv_hotspot_confidence" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:textSize="12sp"
+                        android:textColor="#B0BEC5" android:layout_marginTop="2dp"
+                        tools:text="HIGH Confidence • 15 km radius"/>
+                </LinearLayout>
+
+                <TextView android:id="@+id/tv_hsi_score"
+                    android:layout_width="64dp" android:layout_height="64dp"
+                    android:gravity="center" android:textSize="18sp" android:textStyle="bold"
+                    android:textColor="@color/white" android:background="@drawable/bg_circle_translucent"
+                    android:backgroundTint="#4CAF50" tools:text="0.82"/>
+            </LinearLayout>
+
+            <!-- Conditions Grid -->
+            <GridLayout android:id="@+id/conditions_grid"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginHorizontal="12dp" android:layout_marginTop="8dp"
+                android:columnCount="2" android:rowCount="4">
+
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_columnWeight="1" android:orientation="vertical"
+                    android:padding="8dp" android:background="@drawable/bg_condition_card" android:layout_margin="4dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="🌡️ SST" android:textSize="11sp" android:textColor="#9E9E9E"/>
+                    <TextView android:id="@+id/tv_cond_sst" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:textSize="16sp"
+                        android:textStyle="bold" android:textColor="#E65100" tools:text="28.5°C"/>
+                </LinearLayout>
+
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_columnWeight="1" android:orientation="vertical"
+                    android:padding="8dp" android:background="@drawable/bg_condition_card" android:layout_margin="4dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="🌿 Chlorophyll" android:textSize="11sp" android:textColor="#9E9E9E"/>
+                    <TextView android:id="@+id/tv_cond_chlorophyll" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:textSize="16sp"
+                        android:textStyle="bold" android:textColor="#2E7D32" tools:text="1.52 mg/m³"/>
+                </LinearLayout>
+
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_columnWeight="1" android:orientation="vertical"
+                    android:padding="8dp" android:background="@drawable/bg_condition_card" android:layout_margin="4dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="🌊 Depth" android:textSize="11sp" android:textColor="#9E9E9E"/>
+                    <TextView android:id="@+id/tv_cond_depth" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:textSize="16sp"
+                        android:textStyle="bold" android:textColor="#0277BD" tools:text="-85m"/>
+                </LinearLayout>
+
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_columnWeight="1" android:orientation="vertical"
+                    android:padding="8dp" android:background="@drawable/bg_condition_card" android:layout_margin="4dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="💨 Currents" android:textSize="11sp" android:textColor="#9E9E9E"/>
+                    <TextView android:id="@+id/tv_cond_current" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:textSize="16sp"
+                        android:textStyle="bold" android:textColor="#5C6BC0" tools:text="0.25 m/s"/>
+                </LinearLayout>
+
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_columnWeight="1" android:orientation="vertical"
+                    android:padding="8dp" android:background="@drawable/bg_condition_card" android:layout_margin="4dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="🔥 Thermal Front" android:textSize="11sp" android:textColor="#9E9E9E"/>
+                    <TextView android:id="@+id/tv_cond_sst_gradient" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:textSize="16sp"
+                        android:textStyle="bold" android:textColor="#D84315" tools:text="0.15°C/km"/>
+                </LinearLayout>
+
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_columnWeight="1" android:orientation="vertical"
+                    android:padding="8dp" android:background="@drawable/bg_condition_card" android:layout_margin="4dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="🧂 Salinity" android:textSize="11sp" android:textColor="#9E9E9E"/>
+                    <TextView android:id="@+id/tv_cond_salinity" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:textSize="16sp"
+                        android:textStyle="bold" android:textColor="#6D4C41" tools:text="34.5 PSU"/>
+                </LinearLayout>
+
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_columnWeight="1" android:orientation="vertical"
+                    android:padding="8dp" android:background="@drawable/bg_condition_card" android:layout_margin="4dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="💧 Oxygen" android:textSize="11sp" android:textColor="#9E9E9E"/>
+                    <TextView android:id="@+id/tv_cond_oxygen" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:textSize="16sp"
+                        android:textStyle="bold" android:textColor="#00838F" tools:text="5.2 ml/L"/>
+                </LinearLayout>
+
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_columnWeight="1" android:orientation="vertical"
+                    android:padding="8dp" android:background="@drawable/bg_condition_card" android:layout_margin="4dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="📊 SSH" android:textSize="11sp" android:textColor="#9E9E9E"/>
+                    <TextView android:id="@+id/tv_cond_ssh" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:textSize="16sp"
+                        android:textStyle="bold" android:textColor="#7B1FA2" tools:text="0.003m"/>
+                </LinearLayout>
+            </GridLayout>
+
+            <!-- Predicted Species -->
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp" android:layout_marginTop="12dp"
+                android:text="PREDICTED SPECIES" android:textSize="11sp"
+                android:textColor="#9E9E9E" android:textStyle="bold" android:letterSpacing="0.08"/>
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chip_group_species"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:paddingHorizontal="12dp" android:layout_marginTop="4dp"
+                app:singleSelection="false"/>
+
+            <!-- Advisory -->
+            <TextView android:id="@+id/tv_advisory"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp" android:layout_marginTop="10dp"
+                android:padding="12dp" android:background="@drawable/bg_advisory"
+                android:textSize="13sp" android:textColor="#37474F" android:lineSpacingExtra="4dp"
+                tools:text="🟢 High probability of fish concentration."/>
+
+            <!-- Navigate Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_navigate"
+                android:layout_width="match_parent" android:layout_height="52dp"
+                android:layout_marginHorizontal="16dp" android:layout_marginTop="12dp"
+                android:layout_marginBottom="20dp"
+                android:text="Navigate to Hotspot" android:textSize="15sp"
+                app:cornerRadius="14dp"
+                app:icon="@android:drawable/ic_menu_directions"
+                app:iconGravity="textStart"
+                app:backgroundTint="#0277BD"/>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

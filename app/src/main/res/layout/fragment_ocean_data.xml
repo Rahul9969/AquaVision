@@ -1,0 +1,490 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent"
+    android:fillViewport="true"
+    android:paddingBottom="100dp"
+    android:clipToPadding="false">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp"
+        android:clipChildren="false"
+        android:clipToPadding="false">
+
+        <!-- Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="6dp">
+
+            <ImageView
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:src="@drawable/ic_ocean"
+                app:tint="#0277BD"
+                android:layout_marginEnd="12dp" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/ocean_data"
+                    android:textSize="28sp"
+                    android:fontFamily="sans-serif-black"
+                    android:textColor="@color/white" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/ocean_data_subtitle"
+                    android:textSize="13sp"
+                    android:textColor="#E0E0E0"
+                    android:layout_marginTop="2dp" />
+            </LinearLayout>
+        </LinearLayout>
+
+
+        <!-- Fishing Zones (Hotspots) — Featured Card -->
+        <LinearLayout
+            android:id="@+id/btn_pfz"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="20dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
+            android:background="@drawable/bg_glass_card"
+            android:elevation="4dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="20dp"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:padding="10dp"
+                    android:src="@android:drawable/ic_menu_mapmode"
+                    app:tint="#81D4FA"
+                    android:background="@drawable/bg_circle_translucent"
+                    android:backgroundTint="#20FFFFFF" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/ocean_data_pfz"
+                        android:textSize="17sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/white" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/fishing_zones_subtitle"
+                        android:textSize="12sp"
+                        android:textColor="#E0E0E0"
+                        android:layout_marginTop="2dp" />
+                </LinearLayout>
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_arrow_right"
+                    app:tint="@color/white" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Section: Ocean Conditions -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:text="@string/ocean_data_section_conditions"
+            android:textColor="#B0BEC5"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.08"
+            android:textAllCaps="true" />
+
+        <GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="2"
+            android:alignmentMode="alignBounds"
+            android:columnOrderPreserved="false">
+
+            <!-- SST -->
+            <!-- SST -->
+            <LinearLayout
+                android:id="@+id/btn_sst"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill"
+                android:layout_marginEnd="8dp"
+                android:layout_marginBottom="12dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="@drawable/bg_glass_card"
+                android:elevation="2dp"
+                android:foreground="?attr/selectableItemBackground">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="🌡️" android:textSize="32sp" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp" android:text="@string/ocean_label_sst"
+                        android:textColor="@color/white" android:textSize="14sp" android:textStyle="bold" android:gravity="center" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Chlorophyll -->
+            <!-- Chlorophyll -->
+            <LinearLayout
+                android:id="@+id/btn_chlorophyll"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill"
+                android:layout_marginStart="8dp"
+                android:layout_marginBottom="12dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="@drawable/bg_glass_card"
+                android:elevation="2dp"
+                android:foreground="?attr/selectableItemBackground">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="🌿" android:textSize="32sp" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp" android:text="@string/ocean_label_chlorophyll"
+                        android:textColor="@color/white" android:textSize="14sp" android:textStyle="bold" android:gravity="center" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Winds -->
+            <!-- Winds -->
+            <LinearLayout
+                android:id="@+id/btn_winds"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill"
+                android:layout_marginEnd="8dp"
+                android:layout_marginBottom="12dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="@drawable/bg_glass_card"
+                android:elevation="2dp"
+                android:foreground="?attr/selectableItemBackground">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="💨" android:textSize="32sp" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp" android:text="@string/ocean_label_winds"
+                        android:textColor="@color/white" android:textSize="14sp" android:textStyle="bold" android:gravity="center" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Currents -->
+            <!-- Currents -->
+            <LinearLayout
+                android:id="@+id/btn_currents"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill"
+                android:layout_marginStart="8dp"
+                android:layout_marginBottom="12dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="@drawable/bg_glass_card"
+                android:elevation="2dp"
+                android:foreground="?attr/selectableItemBackground">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="🌊" android:textSize="32sp" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp" android:text="@string/ocean_label_currents"
+                        android:textColor="@color/white" android:textSize="14sp" android:textStyle="bold" android:gravity="center" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Wave Height -->
+            <LinearLayout
+                android:id="@+id/btn_wave_height"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill"
+                android:layout_marginEnd="8dp"
+                android:layout_marginBottom="12dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="@drawable/bg_glass_card"
+                android:elevation="2dp"
+                android:foreground="?attr/selectableItemBackground">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="🌊" android:textSize="32sp" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp" android:text="@string/ocean_label_wave_height"
+                        android:textColor="@color/white" android:textSize="14sp" android:textStyle="bold" android:gravity="center" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Swell -->
+            <LinearLayout
+                android:id="@+id/btn_swell"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill"
+                android:layout_marginStart="8dp"
+                android:layout_marginBottom="12dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="@drawable/bg_glass_card"
+                android:elevation="2dp"
+                android:foreground="?attr/selectableItemBackground">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="🏄" android:textSize="32sp" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp" android:text="@string/ocean_label_swell"
+                        android:textColor="@color/white" android:textSize="14sp" android:textStyle="bold" android:gravity="center" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Mixed Layer Depth -->
+            <LinearLayout
+                android:id="@+id/btn_mld"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill"
+                android:layout_marginEnd="8dp"
+                android:layout_marginBottom="12dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="@drawable/bg_glass_card"
+                android:elevation="2dp"
+                android:foreground="?attr/selectableItemBackground">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="📏" android:textSize="32sp" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp" android:text="@string/ocean_label_mld"
+                        android:textColor="@color/white" android:textSize="14sp" android:textStyle="bold" android:gravity="center" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Ocean State Forecast -->
+            <!-- Ocean State Forecast -->
+            <LinearLayout
+                android:id="@+id/btn_ocean_forecast"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill"
+                android:layout_marginStart="8dp"
+                android:layout_marginBottom="12dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="@drawable/bg_glass_card"
+                android:elevation="2dp"
+                android:foreground="?attr/selectableItemBackground">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="🔮" android:textSize="32sp" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp" android:text="@string/ocean_label_ocean_forecast"
+                        android:textColor="@color/white" android:textSize="14sp" android:textStyle="bold" android:gravity="center" />
+                </LinearLayout>
+            </LinearLayout>
+        </GridLayout>
+
+        <!-- Section: Advisories & Warnings -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="12dp"
+            android:text="@string/ocean_data_section_advisories"
+            android:textColor="#B0BEC5"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.08"
+            android:textAllCaps="true" />
+
+        <GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="2"
+            android:alignmentMode="alignBounds"
+            android:columnOrderPreserved="false">
+
+            <!-- Marine Heat Wave -->
+            <LinearLayout
+                android:id="@+id/btn_heat_wave"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill"
+                android:layout_marginEnd="8dp"
+                android:layout_marginBottom="12dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="@drawable/bg_glass_card"
+                android:elevation="2dp"
+                android:foreground="?attr/selectableItemBackground">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="🔥" android:textSize="32sp" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp" android:text="@string/ocean_label_heat_wave"
+                        android:textColor="@color/white" android:textSize="14sp" android:textStyle="bold" android:gravity="center" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Tides -->
+            <LinearLayout
+                android:id="@+id/btn_tides"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_gravity="fill"
+                android:layout_marginStart="8dp"
+                android:layout_marginBottom="12dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="@drawable/bg_glass_card"
+                android:elevation="2dp"
+                android:foreground="?attr/selectableItemBackground">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="🌙" android:textSize="32sp" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp" android:text="@string/ocean_label_tides"
+                        android:textColor="@color/white" android:textSize="14sp" android:textStyle="bold" android:gravity="center" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Tsunami Early Warning -->
+            <LinearLayout
+                android:id="@+id/btn_tsunami"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_columnSpan="2"
+                android:layout_gravity="fill"
+                android:layout_marginBottom="12dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="@drawable/bg_glass_card"
+                android:elevation="2dp"
+                android:foreground="?attr/selectableItemBackground">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="horizontal"
+                    android:padding="20dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="⚠️" android:textSize="32sp" android:layout_marginEnd="16dp" />
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/ocean_label_tsunami"
+                            android:textColor="@color/white" android:textSize="15sp" android:textStyle="bold" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/ocean_label_tsunami_desc"
+                            android:textColor="#E0E0E0" android:textSize="12sp" android:layout_marginTop="2dp" />
+                    </LinearLayout>
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_arrow_right"
+                        app:tint="@color/white" />
+                </LinearLayout>
+            </LinearLayout>
+        </GridLayout>
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

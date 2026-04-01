@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/cameraFragment"
+        android:icon="@android:drawable/ic_menu_camera"
+        android:title="@string/identify" />
+
+    <item
+        android:id="@+id/volumeFragment"
+        android:icon="@android:drawable/ic_menu_rotate"
+        android:title="@string/volume" />
+
+    <item
+        android:id="@+id/historyFragment"
+        android:icon="@android:drawable/ic_menu_recent_history"
+        android:title="@string/history" />
+
+    <item
+        android:id="@+id/oceanDataFragment"
+        android:icon="@drawable/ic_ocean"
+        android:title="@string/ocean_data" />
+
+    <item
+        android:id="@+id/moreFragment"
+        android:icon="@android:drawable/ic_menu_sort_by_size"
+        android:title="@string/more" />
+</menu>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <TextView
+        android:id="@+id/tvMessage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:maxWidth="300dp"
+        android:padding="12dp"
+        android:text="@string/hello"
+        android:textSize="16sp"
+        android:textColor="#FFFFFF"
+        android:background="@drawable/bg_chat_bubble" />
+
+    <TextView
+        android:id="@+id/tvSender"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/ai_sender"
+        android:textSize="10sp"
+        android:layout_marginTop="4dp"
+        android:alpha="0.6" />
+
+</LinearLayout>

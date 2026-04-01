@@ -1,0 +1,401 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white">
+
+    <!-- Full-screen Map -->
+    <org.osmdroid.views.MapView
+        android:id="@+id/ocean_map"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+
+    <!-- Top Bar: Layer title + status -->
+    <LinearLayout
+        android:id="@+id/top_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="12dp"
+        android:layout_gravity="top"
+        android:background="@drawable/bg_glass_card"
+        android:elevation="8dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="14dp"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_ocean"
+                app:tint="#0277BD" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:paddingStart="12dp"
+                android:paddingEnd="8dp">
+
+                <TextView
+                    android:id="@+id/tv_layer_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:textColor="#212121"
+                    tools:text="Sea Surface Temperature" />
+
+                <TextView
+                    android:id="@+id/tv_layer_status"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="12sp"
+                    android:textColor="#757575"
+                    tools:text="Real-time INCOIS data" />
+            </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_refresh"
+                style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:contentDescription="@string/fishing_refresh"
+                app:icon="@android:drawable/stat_notify_sync"
+                app:iconSize="20dp"
+                app:cornerRadius="12dp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Right side FABs -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp">
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/btn_toggle_map"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:src="@android:drawable/ic_menu_mapmode"
+            app:backgroundTint="@color/white"
+            app:tint="#0277BD"
+            app:fabSize="normal"
+            android:contentDescription="Toggle Satellite View" />
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/btn_center_location"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:src="@android:drawable/ic_menu_mylocation"
+            app:backgroundTint="@color/white"
+            app:tint="#0277BD"
+            app:fabSize="normal"
+            android:contentDescription="@string/center_map" />
+    </LinearLayout>
+
+    <!-- Loading Overlay -->
+    <FrameLayout
+        android:id="@+id/loading_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#88FFFFFF"
+        android:visibility="gone"
+        android:clickable="true"
+        android:focusable="true">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="32dp">
+
+            <com.google.android.material.progressindicator.CircularProgressIndicator
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:indeterminate="true"
+                app:indicatorColor="#0277BD"
+                app:trackCornerRadius="4dp" />
+
+            <TextView
+                android:id="@+id/tv_loading_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/ocean_data_loading"
+                android:textColor="#424242"
+                android:textSize="14sp" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <!-- Legend View -->
+    <LinearLayout
+        android:id="@+id/legend_card"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="16dp"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/bg_glass_card"
+        android:elevation="6dp"
+        android:visibility="gone">
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="8dp">
+            <TextView
+                android:id="@+id/tv_legend_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="#424242"
+                android:layout_gravity="center_horizontal"
+                tools:text="Temperature (°C)"/>
+            <View
+                android:id="@+id/view_legend_gradient"
+                android:layout_width="120dp"
+                android:layout_height="12dp"
+                android:layout_marginTop="6dp"
+                android:layout_marginBottom="4dp" />
+            <RelativeLayout
+                android:layout_width="120dp"
+                android:layout_height="wrap_content">
+                <TextView
+                    android:id="@+id/tv_legend_min"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:textSize="10sp"
+                    tools:text="-2"/>
+                <TextView
+                    android:id="@+id/tv_legend_max"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:textSize="10sp"
+                    tools:text="35"/>
+            </RelativeLayout>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Bottom Sheet for Hotspot Details (only shown for PFZ layer) -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/bottom_sheet"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/transparent"
+        app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior"
+        app:behavior_hideable="true"
+        app:behavior_peekHeight="0dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/bg_glass_card"
+            android:elevation="16dp"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+                <!-- Handle bar -->
+                <View
+                    android:layout_width="40dp"
+                    android:layout_height="4dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/bg_circle_translucent"
+                    android:backgroundTint="#E0E0E0"
+                    android:layout_marginBottom="16dp" />
+
+                <!-- Title + HSI Score -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tv_hotspot_title"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="20sp"
+                            android:textStyle="bold"
+                            android:textColor="#212121"
+                            tools:text="🐟 Fishing Hotspot" />
+
+                        <TextView
+                            android:id="@+id/tv_hotspot_confidence"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="13sp"
+                            android:textColor="#757575"
+                            android:layout_marginTop="2dp"
+                            tools:text="HIGH Confidence • 15 km radius" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tv_hsi_score"
+                        android:layout_width="64dp"
+                        android:layout_height="64dp"
+                        android:gravity="center"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/white"
+                        android:background="@drawable/bg_circle_translucent"
+                        android:backgroundTint="#4CAF50"
+                        tools:text="0.82" />
+                </LinearLayout>
+
+                <!-- Conditions Grid -->
+                <GridLayout
+                    android:id="@+id/conditions_grid"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:columnCount="2"
+                    android:rowCount="4"
+                    android:alignmentMode="alignBounds">
+
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_columnWeight="1" android:orientation="vertical" android:padding="8dp"
+                        android:background="@drawable/bg_condition_card" android:layout_margin="4dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="🌡️ SST" android:textSize="11sp" android:textColor="#9E9E9E" />
+                        <TextView android:id="@+id/tv_cond_sst" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:textSize="16sp" android:textStyle="bold" android:textColor="#E65100" tools:text="28.5°C" />
+                    </LinearLayout>
+
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_columnWeight="1" android:orientation="vertical" android:padding="8dp"
+                        android:background="@drawable/bg_condition_card" android:layout_margin="4dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="🌿 Chlorophyll" android:textSize="11sp" android:textColor="#9E9E9E" />
+                        <TextView android:id="@+id/tv_cond_chlorophyll" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:textSize="16sp" android:textStyle="bold" android:textColor="#2E7D32" tools:text="1.52 mg/m³" />
+                    </LinearLayout>
+
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_columnWeight="1" android:orientation="vertical" android:padding="8dp"
+                        android:background="@drawable/bg_condition_card" android:layout_margin="4dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="🌊 Depth" android:textSize="11sp" android:textColor="#9E9E9E" />
+                        <TextView android:id="@+id/tv_cond_depth" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:textSize="16sp" android:textStyle="bold" android:textColor="#0277BD" tools:text="-85m" />
+                    </LinearLayout>
+
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_columnWeight="1" android:orientation="vertical" android:padding="8dp"
+                        android:background="@drawable/bg_condition_card" android:layout_margin="4dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="💨 Currents" android:textSize="11sp" android:textColor="#9E9E9E" />
+                        <TextView android:id="@+id/tv_cond_current" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:textSize="16sp" android:textStyle="bold" android:textColor="#5C6BC0" tools:text="0.25 m/s" />
+                    </LinearLayout>
+
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_columnWeight="1" android:orientation="vertical" android:padding="8dp"
+                        android:background="@drawable/bg_condition_card" android:layout_margin="4dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="🔥 Thermal Front" android:textSize="11sp" android:textColor="#9E9E9E" />
+                        <TextView android:id="@+id/tv_cond_sst_gradient" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:textSize="16sp" android:textStyle="bold" android:textColor="#D84315" tools:text="0.15°C/km" />
+                    </LinearLayout>
+
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_columnWeight="1" android:orientation="vertical" android:padding="8dp"
+                        android:background="@drawable/bg_condition_card" android:layout_margin="4dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="🧂 Salinity" android:textSize="11sp" android:textColor="#9E9E9E" />
+                        <TextView android:id="@+id/tv_cond_salinity" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:textSize="16sp" android:textStyle="bold" android:textColor="#6D4C41" tools:text="34.5 PSU" />
+                    </LinearLayout>
+
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_columnWeight="1" android:orientation="vertical" android:padding="8dp"
+                        android:background="@drawable/bg_condition_card" android:layout_margin="4dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="💧 Oxygen" android:textSize="11sp" android:textColor="#9E9E9E" />
+                        <TextView android:id="@+id/tv_cond_oxygen" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:textSize="16sp" android:textStyle="bold" android:textColor="#00838F" tools:text="5.2 ml/L" />
+                    </LinearLayout>
+
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_columnWeight="1" android:orientation="vertical" android:padding="8dp"
+                        android:background="@drawable/bg_condition_card" android:layout_margin="4dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="📊 SSH" android:textSize="11sp" android:textColor="#9E9E9E" />
+                        <TextView android:id="@+id/tv_cond_ssh" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:textSize="16sp" android:textStyle="bold" android:textColor="#7B1FA2" tools:text="0.003m" />
+                    </LinearLayout>
+                </GridLayout>
+
+                <!-- Predicted Species -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/fishing_predicted_species"
+                    android:textSize="13sp"
+                    android:textColor="#9E9E9E"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/chip_group_species"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    app:singleSelection="false" />
+
+                <!-- Advisory -->
+                <TextView
+                    android:id="@+id/tv_advisory"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:padding="12dp"
+                    android:background="@drawable/bg_advisory"
+                    android:textSize="13sp"
+                    android:textColor="#37474F"
+                    android:lineSpacingExtra="4dp"
+                    tools:text="🟢 High probability of fish concentration." />
+
+                <!-- Navigate Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_navigate"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/fishing_navigate_here"
+                    android:textSize="16sp"
+                    app:cornerRadius="16dp"
+                    app:icon="@android:drawable/ic_menu_directions"
+                    app:iconGravity="textStart"
+                    app:backgroundTint="#0277BD" />
+
+            </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

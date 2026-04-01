@@ -1,0 +1,65 @@
+Aair
+Black Pomfret
+Black Sea Sprat
+Black Snapper
+Boal
+Catla
+Chapila
+Commoncarp
+Foli
+Gilt-Head Bream
+Green Chromide
+Hourse Mackerel
+Ilish
+Indian Carp
+KalBaush
+Magur
+Mori
+Mrigel
+Mullet
+Pabda
+Pangas
+Pink Perch
+Pomfret
+Puti
+Red Mullet
+Red Sea Bream
+Rohu
+Sea Bass
+Shol
+Shorputi
+Shrimp
+Silver Belly
+Silvercarp
+Striped Red Mullet
+Taki
+Tarabaim
+Tengra
+Tilapia
+Trout
+Asian Paddle-EDIBLE
+Blue Crab-EDIBLE
+Curry Puff-POISONOUS
+Devil Crab-POISONOUS
+Floral Egg-POISONOUS
+Mud Crab-EDIBLE
+Purple Shore-POISONOUS
+Red Eye-EDIBLE
+Scorpion-POISONOUS
+Sentinel Crab-EDIBLE
+Bumphead Parrotfish
+Butterflyfish
+Napoleon Wrasse
+Humpback Grouper
+Crown of Thorns
+Giant Clam
+Sweetlips
+Lobster
+Moray Eel
+Ray
+Parrotfish
+Sea Cucumber
+Grouper
+Shark
+Turtle
+Sea Urchin
