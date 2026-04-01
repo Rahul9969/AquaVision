@@ -110,24 +110,38 @@ class ArMeasureOverlay @JvmOverloads constructor(
         invalidate()
     }
 
-    fun setPoint2(x: Float, y: Float, lengthCm: Float) {
-        point2 = PointF(x, y)
-        lengthLabel = "%.1f cm".format(lengthCm)
+    fun updatePoint1(x: Float, y: Float) {
+        if (point1 == null) return
+        point1?.x = x
+        point1?.y = y
+        invalidate()
+    }
 
-        // Animate line drawing
-        lineAnimator?.cancel()
-        lineAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 400
-            interpolator = AccelerateDecelerateInterpolator()
-            addUpdateListener { anim ->
-                lineProgress = anim.animatedValue as Float
-                invalidate()
+    fun updatePoint2(x: Float, y: Float) {
+        if (point2 == null) {
+            point2 = PointF(x, y)
+            
+            // Start line draw-in animation if it's the first time
+            lineAnimator?.cancel()
+            lineAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+                duration = 400
+                interpolator = AccelerateDecelerateInterpolator()
+                addUpdateListener { anim ->
+                    lineProgress = anim.animatedValue as Float
+                    invalidate()
+                }
+                start()
             }
-            start()
+            if (!dashAnimator.isRunning) dashAnimator.start()
+        } else {
+            point2?.x = x
+            point2?.y = y
         }
+        invalidate()
+    }
 
-        // Start dash march
-        if (!dashAnimator.isRunning) dashAnimator.start()
+    fun setPoint2Length(lengthCm: Float) {
+        lengthLabel = "%.1f cm".format(lengthCm)
         invalidate()
     }
 

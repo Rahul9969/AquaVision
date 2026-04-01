@@ -244,7 +244,7 @@
                             android:textSize="20sp"
                             android:textStyle="bold"
                             android:textColor="#212121"
-                            tools:text="🐟 Fishing Hotspot" />
+                            tools:text="Fishing Hotspot" />
 
                         <TextView
                             android:id="@+id/tv_hotspot_confidence"
@@ -283,7 +283,7 @@
                         android:layout_columnWeight="1" android:orientation="vertical" android:padding="8dp"
                         android:background="@drawable/bg_condition_card" android:layout_margin="4dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="🌡️ SST" android:textSize="11sp" android:textColor="#9E9E9E" />
+                            android:text="SST" android:textSize="11sp" android:textColor="#9E9E9E" />
                         <TextView android:id="@+id/tv_cond_sst" android:layout_width="wrap_content" android:layout_height="wrap_content"
                             android:textSize="16sp" android:textStyle="bold" android:textColor="#E65100" tools:text="28.5°C" />
                     </LinearLayout>
@@ -292,7 +292,7 @@
                         android:layout_columnWeight="1" android:orientation="vertical" android:padding="8dp"
                         android:background="@drawable/bg_condition_card" android:layout_margin="4dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="🌿 Chlorophyll" android:textSize="11sp" android:textColor="#9E9E9E" />
+                            android:text="Chlorophyll" android:textSize="11sp" android:textColor="#9E9E9E" />
                         <TextView android:id="@+id/tv_cond_chlorophyll" android:layout_width="wrap_content" android:layout_height="wrap_content"
                             android:textSize="16sp" android:textStyle="bold" android:textColor="#2E7D32" tools:text="1.52 mg/m³" />
                     </LinearLayout>
@@ -301,7 +301,7 @@
                         android:layout_columnWeight="1" android:orientation="vertical" android:padding="8dp"
                         android:background="@drawable/bg_condition_card" android:layout_margin="4dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="🌊 Depth" android:textSize="11sp" android:textColor="#9E9E9E" />
+                            android:text="Depth" android:textSize="11sp" android:textColor="#9E9E9E" />
                         <TextView android:id="@+id/tv_cond_depth" android:layout_width="wrap_content" android:layout_height="wrap_content"
                             android:textSize="16sp" android:textStyle="bold" android:textColor="#0277BD" tools:text="-85m" />
                     </LinearLayout>
@@ -310,7 +310,7 @@
                         android:layout_columnWeight="1" android:orientation="vertical" android:padding="8dp"
                         android:background="@drawable/bg_condition_card" android:layout_margin="4dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="💨 Currents" android:textSize="11sp" android:textColor="#9E9E9E" />
+                            android:text="Currents" android:textSize="11sp" android:textColor="#9E9E9E" />
                         <TextView android:id="@+id/tv_cond_current" android:layout_width="wrap_content" android:layout_height="wrap_content"
                             android:textSize="16sp" android:textStyle="bold" android:textColor="#5C6BC0" tools:text="0.25 m/s" />
                     </LinearLayout>
@@ -319,7 +319,7 @@
                         android:layout_columnWeight="1" android:orientation="vertical" android:padding="8dp"
                         android:background="@drawable/bg_condition_card" android:layout_margin="4dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="🔥 Thermal Front" android:textSize="11sp" android:textColor="#9E9E9E" />
+                            android:text="Thermal Front" android:textSize="11sp" android:textColor="#9E9E9E" />
                         <TextView android:id="@+id/tv_cond_sst_gradient" android:layout_width="wrap_content" android:layout_height="wrap_content"
                             android:textSize="16sp" android:textStyle="bold" android:textColor="#D84315" tools:text="0.15°C/km" />
                     </LinearLayout>
@@ -328,7 +328,7 @@
                         android:layout_columnWeight="1" android:orientation="vertical" android:padding="8dp"
                         android:background="@drawable/bg_condition_card" android:layout_margin="4dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="🧂 Salinity" android:textSize="11sp" android:textColor="#9E9E9E" />
+                            android:text="Salinity" android:textSize="11sp" android:textColor="#9E9E9E" />
                         <TextView android:id="@+id/tv_cond_salinity" android:layout_width="wrap_content" android:layout_height="wrap_content"
                             android:textSize="16sp" android:textStyle="bold" android:textColor="#6D4C41" tools:text="34.5 PSU" />
                     </LinearLayout>
@@ -337,7 +337,7 @@
                         android:layout_columnWeight="1" android:orientation="vertical" android:padding="8dp"
                         android:background="@drawable/bg_condition_card" android:layout_margin="4dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="💧 Oxygen" android:textSize="11sp" android:textColor="#9E9E9E" />
+                            android:text="Oxygen" android:textSize="11sp" android:textColor="#9E9E9E" />
                         <TextView android:id="@+id/tv_cond_oxygen" android:layout_width="wrap_content" android:layout_height="wrap_content"
                             android:textSize="16sp" android:textStyle="bold" android:textColor="#00838F" tools:text="5.2 ml/L" />
                     </LinearLayout>
@@ -346,7 +346,7 @@
                         android:layout_columnWeight="1" android:orientation="vertical" android:padding="8dp"
                         android:background="@drawable/bg_condition_card" android:layout_margin="4dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="📊 SSH" android:textSize="11sp" android:textColor="#9E9E9E" />
+                            android:text="SSH" android:textSize="11sp" android:textColor="#9E9E9E" />
                         <TextView android:id="@+id/tv_cond_ssh" android:layout_width="wrap_content" android:layout_height="wrap_content"
                             android:textSize="16sp" android:textStyle="bold" android:textColor="#7B1FA2" tools:text="0.003m" />
                     </LinearLayout>

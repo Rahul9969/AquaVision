@@ -180,7 +180,7 @@
             android:layout_width="match_parent"
             android:layout_height="64dp"
             android:layout_marginBottom="20dp"
-            android:text="🛡️  Start Border Protection"
+            android:text="Start Border Protection"
             android:textSize="16sp"
             android:textStyle="bold"
             android:textAllCaps="false"
@@ -237,7 +237,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="✅ Safe for licensed fishermen"
+                    android:text="Safe for licensed fishermen"
                     android:textColor="#A5D6A7"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -319,7 +319,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="❌ NOT authorized - Turn back!"
+                    android:text="NOT authorized - Turn back!"
                     android:textColor="#EF9A9A"
                     android:textSize="12sp" />
             </LinearLayout>

@@ -54,8 +54,8 @@ class ArFishMeasureActivity : ComponentActivity() {
     private lateinit var measureOverlay: ArMeasureOverlay
 
     // Measurement state
-    private var point1: FloatArray? = null // [x, y, z] world coordinates
-    private var point2: FloatArray? = null
+    private var anchor1: Anchor? = null
+    private var anchor2: Anchor? = null
     private var currentFrame: Frame? = null
     private var depthSupported = false
 
@@ -165,6 +165,11 @@ class ArFishMeasureActivity : ComponentActivity() {
                     val frame = s.update()
                     backgroundRenderer.draw(frame)
                     currentFrame = frame
+
+                    val camera = frame.camera
+                    if (camera.trackingState == TrackingState.TRACKING) {
+                        updateOverlayPositions(camera)
+                    }
                 } catch (_: Exception) {}
             }
         })
@@ -186,7 +191,7 @@ class ArFishMeasureActivity : ComponentActivity() {
         val frame = currentFrame ?: return
         val s = session ?: return
 
-        if (point1 != null && point2 != null) return // Already measured
+        if (anchor1 != null && anchor2 != null) return // Already measured
 
         // First try: depth-based 3D point
         var worldPoint = if (depthSupported) {
@@ -205,17 +210,26 @@ class ArFishMeasureActivity : ComponentActivity() {
             return
         }
 
-        if (point1 == null) {
-            point1 = worldPoint
+        // Create ARCore anchor at this 3D point
+        val pose = Pose.makeTranslation(worldPoint[0], worldPoint[1], worldPoint[2])
+        val anchor = try {
+            s.createAnchor(pose)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to create anchor", e)
+            return
+        }
+
+        if (anchor1 == null) {
+            anchor1 = anchor
             runOnUiThread {
-                instructionText.text = "Head marked! Now tap the TAIL of the fish"
-                measureOverlay.setPoint1(screenX, screenY)
+                instructionText.text = "✅ Head marked! Now tap the TAIL of the fish"
+                measureOverlay.setPoint1(screenX, screenY) // initial placement
             }
-            Log.d(TAG, "Point 1: [${worldPoint[0]}, ${worldPoint[1]}, ${worldPoint[2]}]")
+            Log.d(TAG, "Anchor 1 created at: [${worldPoint[0]}, ${worldPoint[1]}, ${worldPoint[2]}]")
         } else {
-            point2 = worldPoint
-            Log.d(TAG, "Point 2: [${worldPoint[0]}, ${worldPoint[1]}, ${worldPoint[2]}]")
-            calculateAndDisplay(screenX, screenY)
+            anchor2 = anchor
+            Log.d(TAG, "Anchor 2 created at: [${worldPoint[0]}, ${worldPoint[1]}, ${worldPoint[2]}]")
+            calculateAndDisplay()
         }
     }
 
@@ -314,9 +328,68 @@ class ArFishMeasureActivity : ComponentActivity() {
         return null
     }
 
-    private fun calculateAndDisplay(screenX: Float, screenY: Float) {
-        val p1 = point1 ?: return
-        val p2 = point2 ?: return
+    private fun updateOverlayPositions(camera: Camera) {
+        val viewWidth = glSurfaceView.width.toFloat()
+        val viewHeight = glSurfaceView.height.toFloat()
+
+        if (viewWidth == 0f || viewHeight == 0f) return
+
+        val projMatrix = FloatArray(16)
+        camera.getProjectionMatrix(projMatrix, 0, 0.1f, 100.0f)
+
+        val viewMatrix = FloatArray(16)
+        camera.getViewMatrix(viewMatrix, 0)
+
+        val viewProjMatrix = FloatArray(16)
+        android.opengl.Matrix.multiplyMM(viewProjMatrix, 0, projMatrix, 0, viewMatrix, 0)
+
+        var screenP1: android.graphics.PointF? = null
+        var screenP2: android.graphics.PointF? = null
+
+        anchor1?.let { a1 ->
+            if (a1.trackingState == TrackingState.TRACKING) {
+                screenP1 = projectToScreen(a1.pose.translation, viewProjMatrix, viewWidth, viewHeight)
+            }
+        }
+
+        anchor2?.let { a2 ->
+            if (a2.trackingState == TrackingState.TRACKING) {
+                screenP2 = projectToScreen(a2.pose.translation, viewProjMatrix, viewWidth, viewHeight)
+            }
+        }
+
+        runOnUiThread {
+            if (screenP1 != null) {
+                measureOverlay.updatePoint1(screenP1!!.x, screenP1!!.y)
+            }
+            if (screenP2 != null) {
+                measureOverlay.updatePoint2(screenP2!!.x, screenP2!!.y)
+            }
+        }
+    }
+
+    private fun projectToScreen(point3d: FloatArray, viewProj: FloatArray, width: Float, height: Float): android.graphics.PointF? {
+        val vector4 = floatArrayOf(point3d[0], point3d[1], point3d[2], 1.0f)
+        val result = FloatArray(4)
+        android.opengl.Matrix.multiplyMV(result, 0, viewProj, 0, vector4, 0)
+
+        if (result[3] <= 0) return null // Behind camera
+
+        val w = result[3]
+        val ndcX = result[0] / w
+        val ndcY = result[1] / w
+
+        val screenX = ((ndcX + 1.0f) / 2.0f) * width
+        val screenY = ((1.0f - ndcY) / 2.0f) * height // Y is flipped in 2D
+        return android.graphics.PointF(screenX, screenY)
+    }
+
+    private fun calculateAndDisplay() {
+        val a1 = anchor1 ?: return
+        val a2 = anchor2 ?: return
+        
+        val p1 = a1.pose.translation
+        val p2 = a2.pose.translation
 
         // 3D Euclidean distance
         val dx = p2[0] - p1[0]
@@ -344,10 +417,10 @@ class ArFishMeasureActivity : ComponentActivity() {
         Log.d(TAG, "Weight: %.2f kg".format(weightKg))
 
         runOnUiThread {
-            instructionText.text = "Measurement complete!"
+            instructionText.text = "✅ Measurement complete!"
 
-            // Animate overlay: marker + line
-            measureOverlay.setPoint2(screenX, screenY, lengthCm)
+            // Give the overlay the final length so it can display the label
+            measureOverlay.setPoint2Length(lengthCm)
 
             tvLength.text = "%.1f cm".format(lengthCm)
             tvWidth.text = "%.1f cm".format(widthCm)
@@ -362,8 +435,10 @@ class ArFishMeasureActivity : ComponentActivity() {
     }
 
     private fun resetMeasurement() {
-        point1 = null
-        point2 = null
+        anchor1?.detach()
+        anchor2?.detach()
+        anchor1 = null
+        anchor2 = null
         instructionText.text = "Tap the HEAD of the fish to start measuring"
         measureOverlay.reset()
         resultCard.animate().alpha(0f).setDuration(200).withEndAction {
