@@ -12,7 +12,7 @@
         android:layout_height="match_parent" />
 
     <!-- Measurement overlay (markers + line) -->
-    <com.surendramaran.yolov8tflite.ar.ArMeasureOverlay
+    <com.rahul.aquavision.ar.ArMeasureOverlay
         android:id="@+id/measure_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
@@ -255,6 +255,17 @@
                         android:textStyle="bold" />
                 </LinearLayout>
             </LinearLayout>
+
+            <Button
+                android:id="@+id/btn_save"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="16dp"
+                android:text="Save Measurement"
+                android:textSize="16sp"
+                android:textColor="@android:color/white"
+                android:textStyle="bold"
+                android:backgroundTint="#0288D1"/>
 
         </LinearLayout>
     </androidx.cardview.widget.CardView>

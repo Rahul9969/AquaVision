@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.surendramaran.yolov8tflite"
+    namespace = "com.rahul.aquavision"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.surendramaran.yolov8tflite"
+        applicationId = "com.rahul.aquavision"
         minSdk = 28
         targetSdk = 34
         versionCode = 1

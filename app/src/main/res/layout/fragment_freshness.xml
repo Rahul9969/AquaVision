@@ -94,7 +94,7 @@
                                 android:scaleType="fitCenter"
                                 android:visibility="gone" />
 
-                            <com.surendramaran.yolov8tflite.ui.customview.OverlayView
+                            <com.rahul.aquavision.ui.customview.OverlayView
                                 android:id="@+id/overlayEyes"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"

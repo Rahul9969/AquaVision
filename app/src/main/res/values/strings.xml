@@ -233,7 +233,7 @@
     <string name="total_eyes_format">(Eyes: %1$d)</string>
 
     <!-- Fishing Zone Feature -->
-    <string name="fishing_zones">🐟 Fishing Zones</string>
+    <string name="fishing_zones">Fishing Zones</string>
     <string name="fishing_zones_subtitle">Satellite-based fish hotspot predictions</string>
     <string name="fishing_hotspots">Hotspots</string>
     <string name="fishing_sst">SST</string>
@@ -244,23 +244,23 @@
     <string name="fishing_loading_zones">Computing fishing zones…</string>
     <string name="fishing_loading_heatmap">Building heatmap overlay…</string>
     <string name="fishing_predicted_species">PREDICTED SPECIES</string>
-    <string name="fishing_navigate_here">🧭 Navigate Here</string>
+    <string name="fishing_navigate_here">Navigate Here</string>
     <string name="fishing_error">Could not load fishing zones: %1$s</string>
 
     <!-- Ocean Data Tab -->
     <string name="ocean_data">Ocean Data</string>
-    <string name="ocean_data_pfz">🐟 Fishing Zones</string>
-    <string name="ocean_data_sst">🌡️ SST</string>
-    <string name="ocean_data_chlorophyll">🌿 Chlorophyll</string>
-    <string name="ocean_data_winds">💨 Winds</string>
-    <string name="ocean_data_currents">🌊 Currents</string>
-    <string name="ocean_data_wave_height">🌊 Wave Height</string>
-    <string name="ocean_data_swell">🏄 Swell</string>
-    <string name="ocean_data_mld">📏 Mixed Layer Depth</string>
-    <string name="ocean_data_ocean_forecast">🔮 Ocean Forecast</string>
-    <string name="ocean_data_heat_wave">🔥 Heat Wave</string>
-    <string name="ocean_data_tides">🌙 Tides</string>
-    <string name="ocean_data_tsunami">⚠️ Tsunami Warning</string>
+    <string name="ocean_data_pfz">Fishing Zones</string>
+    <string name="ocean_data_sst">SST</string>
+    <string name="ocean_data_chlorophyll">Chlorophyll</string>
+    <string name="ocean_data_winds">Winds</string>
+    <string name="ocean_data_currents">Currents</string>
+    <string name="ocean_data_wave_height">Wave Height</string>
+    <string name="ocean_data_swell">Swell</string>
+    <string name="ocean_data_mld">Mixed Layer Depth</string>
+    <string name="ocean_data_ocean_forecast">Ocean Forecast</string>
+    <string name="ocean_data_heat_wave">Heat Wave</string>
+    <string name="ocean_data_tides">Tides</string>
+    <string name="ocean_data_tsunami">Tsunami Warning</string>
     <string name="ocean_data_loading">Loading ocean data…</string>
     <string name="ocean_data_layer_info">Ocean Data Layers</string>
     <string name="ocean_data_layer_error">Could not load layer: %1$s</string>
@@ -293,5 +293,30 @@
         <item>dms</item>
         <item>decimal</item>
     </string-array>
+
+    <!-- Language Names -->
+    <string name="language_kannada">ಕನ್ನಡ (Kannada)</string>
+    <string name="language_gujarati">ગુજરાતી (Gujarati)</string>
+    <string name="language_marathi">मराठी (Marathi)</string>
+    <string name="language_punjabi">ਪੰਜਾਬੀ (Punjabi)</string>
+    <string name="language_odia">ଓଡ଼ିଆ (Odia)</string>
+    <string name="language_assamese">অসমীয়া (Assamese)</string>
+    <string name="language_urdu">اردو (Urdu)</string>
+    <string name="language_konkani">कोंकणी (Konkani)</string>
+    <string name="language_manipuri">মণিপুরী (Manipuri)</string>
+
+    <!-- Protected Species -->
+    <string name="protected_species_alert">Protected Species Detected!</string>
+    <string name="protected_species_message">This species is protected under the Wildlife Protection Act. Catching or trading this species is prohibited.</string>
+    <string name="conservation_note">Conservation Note</string>
+    <string name="log_conservation">Log for Conservation</string>
+    <string name="dismiss">Dismiss</string>
+
+    <!-- Camera -->
+    <string name="capture">Capture</string>
+    <string name="flash_on">Flash On</string>
+    <string name="flash_off">Flash Off</string>
+    <string name="switch_camera">Switch Camera</string>
+    <string name="close_camera">Close Camera</string>
 
 </resources>

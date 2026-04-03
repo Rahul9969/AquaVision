@@ -7,22 +7,22 @@
 
     <fragment
         android:id="@+id/cameraFragment"
-        android:name="com.surendramaran.yolov8tflite.ui.camera.CameraFragment"
+        android:name="com.rahul.aquavision.ui.camera.CameraFragment"
         android:label="@string/camera" />
 
     <fragment
         android:id="@+id/freshnessFragment"
-        android:name="com.surendramaran.yolov8tflite.ui.FreshnessFragment"
+        android:name="com.rahul.aquavision.ui.FreshnessFragment"
         android:label="@string/check_freshness" />
 
     <fragment
         android:id="@+id/volumeFragment"
-        android:name="com.surendramaran.yolov8tflite.ui.volume.VolumeFragment"
+        android:name="com.rahul.aquavision.ui.volume.VolumeFragment"
         android:label="@string/volume" />
 
     <fragment
         android:id="@+id/analyticsFragment"
-        android:name="com.surendramaran.yolov8tflite.ui.AnalyticsFragment"
+        android:name="com.rahul.aquavision.ui.AnalyticsFragment"
         android:label="@string/analytics"
         tools:layout="@layout/fragment_analytics">
         <action
@@ -36,22 +36,22 @@
 
     <fragment
         android:id="@+id/moreFragment"
-        android:name="com.surendramaran.yolov8tflite.ui.MoreFragment"
+        android:name="com.rahul.aquavision.ui.MoreFragment"
         android:label="@string/more" />
 
     <fragment
         android:id="@+id/chatFragment"
-        android:name="com.surendramaran.yolov8tflite.ui.chat.ChatFragment"
+        android:name="com.rahul.aquavision.ui.chat.ChatFragment"
         android:label="@string/ai_chat" />
 
     <fragment
         android:id="@+id/mapFragment"
-        android:name="com.surendramaran.yolov8tflite.ui.MapFragment"
+        android:name="com.rahul.aquavision.ui.MapFragment"
         android:label="@string/map" />
 
     <fragment
         android:id="@+id/historyFragment"
-        android:name="com.surendramaran.yolov8tflite.ui.history.HistoryFragment"
+        android:name="com.rahul.aquavision.ui.history.HistoryFragment"
         android:label="@string/history">
         <action
             android:id="@+id/action_history_to_detail"
@@ -64,7 +64,7 @@
 
     <fragment
         android:id="@+id/historyDetailFragment"
-        android:name="com.surendramaran.yolov8tflite.ui.history.HistoryDetailFragment"
+        android:name="com.rahul.aquavision.ui.history.HistoryDetailFragment"
         android:label="@string/detection_detail">
         <argument android:name="imagePath" app:argType="string" />
         <argument android:name="timestamp" app:argType="long" />
@@ -81,7 +81,7 @@
 
     <fragment
         android:id="@+id/languageFragment"
-        android:name="com.surendramaran.yolov8tflite.ui.onboarding.LanguageFragment"
+        android:name="com.rahul.aquavision.ui.onboarding.LanguageFragment"
         android:label="@string/select_language"
         tools:layout="@layout/fragment_language">
         <action
@@ -93,7 +93,7 @@
 
     <fragment
         android:id="@+id/profileFragment"
-        android:name="com.surendramaran.yolov8tflite.ui.profile.ProfileFragment"
+        android:name="com.rahul.aquavision.ui.profile.ProfileFragment"
         android:label="@string/profile">
         <argument
             android:name="isOnboarding"
@@ -103,12 +103,12 @@
 
     <fragment
         android:id="@+id/fishingZoneFragment"
-        android:name="com.surendramaran.yolov8tflite.ui.fishing.FishingZoneFragment"
+        android:name="com.rahul.aquavision.ui.fishing.FishingZoneFragment"
         android:label="@string/fishing_zones" />
 
     <fragment
         android:id="@+id/oceanDataFragment"
-        android:name="com.surendramaran.yolov8tflite.ui.ocean.OceanDataFragment"
+        android:name="com.rahul.aquavision.ui.ocean.OceanDataFragment"
         android:label="@string/ocean_data">
 
         <action
@@ -118,7 +118,7 @@
 
     <fragment
         android:id="@+id/oceanDataMapFragment"
-        android:name="com.surendramaran.yolov8tflite.ui.ocean.OceanDataMapFragment"
+        android:name="com.rahul.aquavision.ui.ocean.OceanDataMapFragment"
         android:label="@string/ocean_data">
 
         <argument
@@ -129,7 +129,7 @@
 
     <fragment
         android:id="@+id/geoFenceFragment"
-        android:name="com.surendramaran.yolov8tflite.geofence.GeoFenceFragment"
+        android:name="com.rahul.aquavision.geofence.GeoFenceFragment"
         android:label="Geo-Fence Protection" />
 
 </navigation>

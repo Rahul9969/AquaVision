@@ -144,8 +144,7 @@
                         <ImageView
                             android:layout_width="40dp"
                             android:layout_height="40dp"
-                            android:src="@drawable/ic_launcher_foreground"
-                            app:tint="@color/white"
+                            android:src="@mipmap/ic_launcher"
                             android:background="@drawable/bg_circle_translucent"
                             android:backgroundTint="#4DFFFFFF"
                             android:padding="8dp"/>

@@ -1,0 +1,36 @@
+<resources>
+    <string name="app_name">একুৱাভিশন</string>
+    <string name="camera">কেমেৰা</string>
+    <string name="gallery">গেলেৰী</string>
+    <string name="settings">ছেটিংছ</string>
+    <string name="choose_language">ভাসা খনবীউ</string>
+    <string name="syncing_data">ডাটা ছিংক তৌরি…</string>
+    <string name="data_synced_successfully">ডাটা ছিংক তৌখ্ৰে</string>
+    <string name="sync_failed">ছিংক ফংখ্ৰে</string>
+    <string name="ocean_data">সমুদ্ৰগী তথ্য</string>
+    <string name="ocean_data_subtitle">ৰিয়েল-টাইম সমুদ্ৰগী ফিভম</string>
+    <string name="fishing_zones">মীন ফাবা মফম</string>
+    <string name="fishing_zones_subtitle">সেটেলাইট শীজিন্নবা ঙা হোটস্পোট</string>
+    <string name="ocean_data_pfz">মীন ফাবা মফম</string>
+    <string name="ocean_data_sst">SST</string>
+    <string name="ocean_data_chlorophyll">ক্লোৰোফিল</string>
+    <string name="ocean_data_winds">নুংশিৎ</string>
+    <string name="ocean_data_currents">ঈশিং চেল</string>
+    <string name="ocean_data_wave_height">ঈচেল ৱাংমদা</string>
+    <string name="ocean_data_swell">স্বেল</string>
+    <string name="ocean_data_mld">মিক্সড লেয়াৰ ডিপথ</string>
+    <string name="ocean_data_ocean_forecast">সমুদ্ৰ পূৰ্বানুমান</string>
+    <string name="ocean_data_heat_wave">অসুম ফাউবা</string>
+    <string name="ocean_data_tides">জোৱাৰ</string>
+    <string name="ocean_data_tsunami">সুনামী খংহনবা</string>
+    <string name="capture">কেপচাৰ</string>
+    <string name="protected_species_alert">শেংদোক্নবা প্ৰজাতি ফংখ্ৰে</string>
+    <string name="protected_species_message">মসী প্ৰজাতি ৱাইল্ডলাইফ প্ৰোটেকশন এক্টকী মখাদা শেংদোক্নদুনা থমলি।</string>
+    <string name="log_conservation">কনজাৰভেশনগীদমক লোগ তৌ</string>
+    <string name="dismiss">পাম্বিউ</string>
+    <string name="tab_home">হোম</string>
+    <string name="tab_volume">ভোল্যুম</string>
+    <string name="tab_detect">ফংদোক্তুনা থম্বা</string>
+    <string name="tab_history">ৱাৰী</string>
+    <string name="tab_more">অমুক্কা হেন্না</string>
+</resources>

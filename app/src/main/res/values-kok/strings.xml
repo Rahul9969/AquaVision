@@ -1,0 +1,36 @@
+<resources>
+    <string name="app_name">ॲक्वाव्हिजन</string>
+    <string name="camera">कॅमेरा</string>
+    <string name="gallery">गॅलरी</string>
+    <string name="settings">सेटिंग्ज</string>
+    <string name="choose_language">भास निवडात</string>
+    <string name="syncing_data">डेटा सिंक जात आसा…</string>
+    <string name="data_synced_successfully">डेटा यशस्वीपणान सिंक जालो</string>
+    <string name="sync_failed">सिंक अयशस्वी</string>
+    <string name="ocean_data">दर्या डेटा</string>
+    <string name="ocean_data_subtitle">रिअल-टाइम दर्या परिस्थिती</string>
+    <string name="fishing_zones">मासेमारी विभाग</string>
+    <string name="fishing_zones_subtitle">उपग्रह आधारित मासो हॉटस्पॉट अंदाज</string>
+    <string name="ocean_data_pfz">मासेमारी विभाग</string>
+    <string name="ocean_data_sst">SST</string>
+    <string name="ocean_data_chlorophyll">क्लोरोफिल</string>
+    <string name="ocean_data_winds">वारो</string>
+    <string name="ocean_data_currents">प्रवाह</string>
+    <string name="ocean_data_wave_height">लाट उंचाय</string>
+    <string name="ocean_data_swell">स्वेल</string>
+    <string name="ocean_data_mld">मिश्र थर खोली</string>
+    <string name="ocean_data_ocean_forecast">दर्या अंदाज</string>
+    <string name="ocean_data_heat_wave">उष्णतेची लाट</string>
+    <string name="ocean_data_tides">भरती-ओहोटी</string>
+    <string name="ocean_data_tsunami">त्सुनामी चेतावणी</string>
+    <string name="capture">कॅप्चर</string>
+    <string name="protected_species_alert">संरक्षित प्रजाती सापडली</string>
+    <string name="protected_species_message">ही प्रजाती वन्यजीव संरक्षण कायद्यानुसार संरक्षित आसा.</string>
+    <string name="log_conservation">संवर्धनाखातीर लॉग करात</string>
+    <string name="dismiss">बंद करात</string>
+    <string name="tab_home">होम</string>
+    <string name="tab_volume">व्हॉल्यूम</string>
+    <string name="tab_detect">शोध</string>
+    <string name="tab_history">इतिहास</string>
+    <string name="tab_more">अधिक</string>
+</resources>

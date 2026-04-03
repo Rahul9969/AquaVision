@@ -5,4 +5,14 @@
     <locale android:name="ta"/>
     <locale android:name="ml"/>
     <locale android:name="te"/>
-    <locale android:name="bn"/> </locale-config>
+    <locale android:name="bn"/>
+    <locale android:name="kn"/>
+    <locale android:name="gu"/>
+    <locale android:name="mr"/>
+    <locale android:name="pa"/>
+    <locale android:name="or"/>
+    <locale android:name="as"/>
+    <locale android:name="ur"/>
+    <locale android:name="kok"/>
+    <locale android:name="mni"/>
+</locale-config>

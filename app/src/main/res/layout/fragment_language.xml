@@ -85,6 +85,87 @@
                 android:text="বাংলা (Bengali)"
                 android:textSize="18sp" />
 
+            <RadioButton
+                android:id="@+id/rbKannada"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="12dp"
+                android:tag="kn"
+                android:text="@string/language_kannada"
+                android:textSize="18sp" />
+
+            <RadioButton
+                android:id="@+id/rbGujarati"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="12dp"
+                android:tag="gu"
+                android:text="@string/language_gujarati"
+                android:textSize="18sp" />
+
+            <RadioButton
+                android:id="@+id/rbMarathi"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="12dp"
+                android:tag="mr"
+                android:text="@string/language_marathi"
+                android:textSize="18sp" />
+
+            <RadioButton
+                android:id="@+id/rbPunjabi"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="12dp"
+                android:tag="pa"
+                android:text="@string/language_punjabi"
+                android:textSize="18sp" />
+
+            <RadioButton
+                android:id="@+id/rbOdia"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="12dp"
+                android:tag="or"
+                android:text="@string/language_odia"
+                android:textSize="18sp" />
+
+            <RadioButton
+                android:id="@+id/rbAssamese"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="12dp"
+                android:tag="as"
+                android:text="@string/language_assamese"
+                android:textSize="18sp" />
+
+            <RadioButton
+                android:id="@+id/rbUrdu"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="12dp"
+                android:tag="ur"
+                android:text="@string/language_urdu"
+                android:textSize="18sp" />
+
+            <RadioButton
+                android:id="@+id/rbKonkani"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="12dp"
+                android:tag="kok"
+                android:text="@string/language_konkani"
+                android:textSize="18sp" />
+
+            <RadioButton
+                android:id="@+id/rbManipuri"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="12dp"
+                android:tag="mni"
+                android:text="@string/language_manipuri"
+                android:textSize="18sp" />
+
         </RadioGroup>
     </ScrollView>
 

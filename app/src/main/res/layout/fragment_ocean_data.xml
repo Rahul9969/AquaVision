@@ -80,7 +80,7 @@
                     android:layout_width="52dp"
                     android:layout_height="52dp"
                     android:padding="10dp"
-                    android:src="@android:drawable/ic_menu_mapmode"
+                    android:src="@drawable/ic_fish"
                     app:tint="#81D4FA"
                     android:background="@drawable/bg_circle_translucent"
                     android:backgroundTint="#20FFFFFF" />
@@ -138,7 +138,6 @@
             android:columnOrderPreserved="false">
 
             <!-- SST -->
-            <!-- SST -->
             <LinearLayout
                 android:id="@+id/btn_sst"
                 android:layout_width="0dp"
@@ -158,15 +157,18 @@
                     android:gravity="center"
                     android:orientation="vertical"
                     android:padding="20dp">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="🌡️" android:textSize="32sp" />
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_thermometer"
+                        app:tint="#EF5350"
+                        android:padding="4dp" />
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:layout_marginTop="8dp" android:text="@string/ocean_label_sst"
                         android:textColor="@color/white" android:textSize="14sp" android:textStyle="bold" android:gravity="center" />
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Chlorophyll -->
             <!-- Chlorophyll -->
             <LinearLayout
                 android:id="@+id/btn_chlorophyll"
@@ -187,15 +189,18 @@
                     android:gravity="center"
                     android:orientation="vertical"
                     android:padding="20dp">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="🌿" android:textSize="32sp" />
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_leaf"
+                        app:tint="#66BB6A"
+                        android:padding="4dp" />
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:layout_marginTop="8dp" android:text="@string/ocean_label_chlorophyll"
                         android:textColor="@color/white" android:textSize="14sp" android:textStyle="bold" android:gravity="center" />
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Winds -->
             <!-- Winds -->
             <LinearLayout
                 android:id="@+id/btn_winds"
@@ -216,15 +221,18 @@
                     android:gravity="center"
                     android:orientation="vertical"
                     android:padding="20dp">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="💨" android:textSize="32sp" />
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_wind"
+                        app:tint="#90CAF9"
+                        android:padding="4dp" />
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:layout_marginTop="8dp" android:text="@string/ocean_label_winds"
                         android:textColor="@color/white" android:textSize="14sp" android:textStyle="bold" android:gravity="center" />
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Currents -->
             <!-- Currents -->
             <LinearLayout
                 android:id="@+id/btn_currents"
@@ -245,8 +253,12 @@
                     android:gravity="center"
                     android:orientation="vertical"
                     android:padding="20dp">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="🌊" android:textSize="32sp" />
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_waves"
+                        app:tint="#4FC3F7"
+                        android:padding="4dp" />
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:layout_marginTop="8dp" android:text="@string/ocean_label_currents"
                         android:textColor="@color/white" android:textSize="14sp" android:textStyle="bold" android:gravity="center" />
@@ -273,8 +285,12 @@
                     android:gravity="center"
                     android:orientation="vertical"
                     android:padding="20dp">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="🌊" android:textSize="32sp" />
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_water_drop"
+                        app:tint="#29B6F6"
+                        android:padding="4dp" />
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:layout_marginTop="8dp" android:text="@string/ocean_label_wave_height"
                         android:textColor="@color/white" android:textSize="14sp" android:textStyle="bold" android:gravity="center" />
@@ -301,8 +317,12 @@
                     android:gravity="center"
                     android:orientation="vertical"
                     android:padding="20dp">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="🏄" android:textSize="32sp" />
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_waves"
+                        app:tint="#26C6DA"
+                        android:padding="4dp" />
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:layout_marginTop="8dp" android:text="@string/ocean_label_swell"
                         android:textColor="@color/white" android:textSize="14sp" android:textStyle="bold" android:gravity="center" />
@@ -329,15 +349,18 @@
                     android:gravity="center"
                     android:orientation="vertical"
                     android:padding="20dp">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="📏" android:textSize="32sp" />
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_depth"
+                        app:tint="#FFA726"
+                        android:padding="4dp" />
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:layout_marginTop="8dp" android:text="@string/ocean_label_mld"
                         android:textColor="@color/white" android:textSize="14sp" android:textStyle="bold" android:gravity="center" />
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Ocean State Forecast -->
             <!-- Ocean State Forecast -->
             <LinearLayout
                 android:id="@+id/btn_ocean_forecast"
@@ -358,8 +381,12 @@
                     android:gravity="center"
                     android:orientation="vertical"
                     android:padding="20dp">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="🔮" android:textSize="32sp" />
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_globe"
+                        app:tint="#AB47BC"
+                        android:padding="4dp" />
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:layout_marginTop="8dp" android:text="@string/ocean_label_ocean_forecast"
                         android:textColor="@color/white" android:textSize="14sp" android:textStyle="bold" android:gravity="center" />
@@ -407,8 +434,12 @@
                     android:gravity="center"
                     android:orientation="vertical"
                     android:padding="20dp">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="🔥" android:textSize="32sp" />
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_flame"
+                        app:tint="#FF7043"
+                        android:padding="4dp" />
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:layout_marginTop="8dp" android:text="@string/ocean_label_heat_wave"
                         android:textColor="@color/white" android:textSize="14sp" android:textStyle="bold" android:gravity="center" />
@@ -435,8 +466,12 @@
                     android:gravity="center"
                     android:orientation="vertical"
                     android:padding="20dp">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="🌙" android:textSize="32sp" />
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_moon"
+                        app:tint="#FFD54F"
+                        android:padding="4dp" />
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:layout_marginTop="8dp" android:text="@string/ocean_label_tides"
                         android:textColor="@color/white" android:textSize="14sp" android:textStyle="bold" android:gravity="center" />
@@ -463,8 +498,13 @@
                     android:gravity="center"
                     android:orientation="horizontal"
                     android:padding="20dp">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="⚠️" android:textSize="32sp" android:layout_marginEnd="16dp" />
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_warning_triangle"
+                        app:tint="#FFB300"
+                        android:padding="4dp"
+                        android:layout_marginEnd="16dp" />
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
