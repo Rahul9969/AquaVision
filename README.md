@@ -506,6 +506,9 @@ AquaVision/
 │           ├── values/                # Strings, colors, themes
 │           └── mipmap/                # App icons
 ├── gradle/
+├── server/                            # Admin Dashboard (Next.js)
+│   ├── src/app/                       # Web Dashboard & API routes
+│   └── package.json                   # Web dependencies
 ├── build.gradle.kts                   # Project-level config
 ├── settings.gradle.kts
 └── README.md
@@ -557,6 +560,35 @@ AquaVision/
    Or open in Android Studio and click **Run** on a connected physical device.
 
 > ⚠️ **Note:** The app requires a physical device with ARM64 architecture. It will not run on x86 emulators due to TFLite GPU delegate and ARCore requirements.
+
+### Server Dashboard Setup
+
+The Next.js dashboard is located in the `server/` folder and can be run independently to view catch statistics and logs.
+
+1. **Navigate to the server directory**
+   ```bash
+   cd server
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Configure Environment Variables**
+   Create a `.env.local` file inside the `server/` directory:
+   ```env
+   NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
+   NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+   NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your_cloud_name
+   ```
+
+4. **Run the development server**
+   ```bash
+   npm run dev
+   ```
+   Access the dashboard at [http://localhost:3000](http://localhost:3000).
 
 ---
 
@@ -730,7 +762,7 @@ When a protected species is detected, the app:
 
 ## 🖥️ Server Dashboard
 
-The companion **Next.js** dashboard ([AquaVision Server](https://github.com/Rahul9969/AquaVision_Server)) provides:
+The companion **Next.js** dashboard is included within this repository and provides:
 
 ### Dashboard Tabs
 
