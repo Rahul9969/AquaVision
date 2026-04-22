@@ -2,14 +2,10 @@ package com.rahul.aquavision.ui.chat
 
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
-import android.graphics.Typeface
 import android.os.Build
 import android.text.Html
 import android.text.SpannableStringBuilder
 import android.text.Spanned
-import android.text.style.BulletSpan
-import android.text.style.RelativeSizeSpan
-import android.text.style.StyleSpan
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -34,6 +30,10 @@ class ChatAdapter : RecyclerView.Adapter<ChatAdapter.ChatViewHolder>() {
     private val animatedPositions = mutableSetOf<Int>()
     private val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
 
+    // ── Formatting cache: avoids re-parsing unchanged text ──
+    private var cachedRawText: String = ""
+    private var cachedFormatted: Spanned = SpannableStringBuilder("")
+
     companion object {
         const val VIEW_TYPE_USER = 0
         const val VIEW_TYPE_AI = 1
@@ -42,6 +42,9 @@ class ChatAdapter : RecyclerView.Adapter<ChatAdapter.ChatViewHolder>() {
 
     fun addMessage(text: String, isUser: Boolean) {
         messages.add(ChatMessage(text, isUser))
+        // Clear cache when a new message is added
+        cachedRawText = ""
+        cachedFormatted = SpannableStringBuilder("")
         notifyItemInserted(messages.size - 1)
     }
 
@@ -114,7 +117,7 @@ class ChatAdapter : RecyclerView.Adapter<ChatAdapter.ChatViewHolder>() {
                 aiRow.visibility = View.VISIBLE
                 val tvAiMessage = root.findViewById<TextView>(R.id.tvAiMessage)
                 val tvAiTime = root.findViewById<TextView>(R.id.tvAiTime)
-                tvAiMessage.text = formatMarkdown(message.text)
+                tvAiMessage.text = getFormattedText(message.text)
                 tvAiTime.text = timeFormat.format(Date(message.timestamp))
             }
         }
@@ -135,11 +138,22 @@ class ChatAdapter : RecyclerView.Adapter<ChatAdapter.ChatViewHolder>() {
             val root = holder.itemView
             if (!message.isUser && !message.isTyping) {
                 val tvAiMessage = root.findViewById<TextView>(R.id.tvAiMessage)
-                tvAiMessage?.text = formatMarkdown(message.text)
+                tvAiMessage?.text = getFormattedText(message.text)
             }
         } else {
             super.onBindViewHolder(holder, position, payloads)
         }
+    }
+
+    /**
+     * Returns cached formatted text if the raw text hasn't changed,
+     * otherwise re-formats and caches the result.
+     */
+    private fun getFormattedText(raw: String): Spanned {
+        if (raw == cachedRawText) return cachedFormatted
+        cachedRawText = raw
+        cachedFormatted = formatMarkdown(raw)
+        return cachedFormatted
     }
 
     /**
@@ -149,9 +163,9 @@ class ChatAdapter : RecyclerView.Adapter<ChatAdapter.ChatViewHolder>() {
     private fun formatMarkdown(raw: String): Spanned {
         if (raw.isBlank()) return SpannableStringBuilder("")
 
-        // Step 1: Convert markdown to HTML
+        // Convert markdown to HTML
         val html = raw
-            // Escape any actual HTML characters
+            // Escape HTML characters
             .replace("&", "&amp;")
             .replace("<", "&lt;")
             .replace(">", "&gt;")
@@ -162,10 +176,6 @@ class ChatAdapter : RecyclerView.Adapter<ChatAdapter.ChatViewHolder>() {
             // Bold: **text** → <b>text</b>
             .replace(Regex("""\*\*(.+?)\*\*""")) {
                 "<b>${it.groupValues[1]}</b>"
-            }
-            // Italic: *text* (single asterisk not at line start) → <i>text</i>
-            .replace(Regex("""(?<=\s|^)\*(?!\s)(.+?)(?<!\s)\*(?=\s|$|[.,;:])""")) {
-                "<i>${it.groupValues[1]}</i>"
             }
             // Bullet points: lines starting with * or - → bullet character
             .replace(Regex("""^\s*[\*\-]\s+(.+)$""", RegexOption.MULTILINE)) {
@@ -182,7 +192,6 @@ class ChatAdapter : RecyclerView.Adapter<ChatAdapter.ChatViewHolder>() {
             // Clean up excessive <br>
             .replace(Regex("""(<br>){3,}"""), "<br><br>")
 
-        // Step 2: Convert HTML to Spanned
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             Html.fromHtml(html, Html.FROM_HTML_MODE_COMPACT)
         } else {
@@ -214,7 +223,6 @@ class ChatAdapter : RecyclerView.Adapter<ChatAdapter.ChatViewHolder>() {
             )
         }
 
-        // Loop the animation
         set.addListener(object : android.animation.AnimatorListenerAdapter() {
             override fun onAnimationEnd(animation: android.animation.Animator) {
                 if (dot1.isAttachedToWindow) {
