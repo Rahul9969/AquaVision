@@ -131,8 +131,8 @@
     <string name="gallery_image">Gallery Image</string>
     <string name="detection_results">Detection Results</string>
     <string name="total_detected_placeholder">Total Detected: 5</string>
-    <string name="no_fish_detected">No fish detected</string>
-    <string name="no_detection_tips">Try these tips for better results:\n\n📸 Ensure good lighting &amp; brightness\n🐟 Place the fish clearly in frame\n📐 Avoid extreme angles\n🔍 Move closer for smaller fish\n🌊 Reduce background clutter</string>
+    <string name="no_fish_detected">No Fish Detected</string>
+    <string name="no_detection_tips">Tips for better results:\n\n•  Ensure good lighting and brightness\n•  Place the fish clearly in frame\n•  Avoid extreme angles or tilt\n•  Move closer for smaller fish\n•  Reduce background clutter</string>
     <string name="retake_photo">Retake Photo</string>
     <string name="save_this_capture">Save this capture?</string>
     <string name="discard">Discard</string>

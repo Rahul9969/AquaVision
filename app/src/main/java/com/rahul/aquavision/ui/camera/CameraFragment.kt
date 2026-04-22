@@ -250,6 +250,27 @@ class CameraFragment : Fragment(), Detector.DetectorListener {
         })
 
         bindListeners()
+
+        // Subtle pulse animation on the capture FAB
+        startFabPulse()
+    }
+
+    private fun startFabPulse() {
+        val scaleX = android.animation.ObjectAnimator.ofFloat(binding.fab, "scaleX", 1f, 1.08f, 1f)
+        val scaleY = android.animation.ObjectAnimator.ofFloat(binding.fab, "scaleY", 1f, 1.08f, 1f)
+        android.animation.AnimatorSet().apply {
+            playTogether(scaleX, scaleY)
+            duration = 1500
+            interpolator = android.view.animation.AccelerateDecelerateInterpolator()
+            addListener(object : android.animation.AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: android.animation.Animator) {
+                    if (_binding != null && binding.fab.visibility == View.VISIBLE) {
+                        start()
+                    }
+                }
+            })
+            start()
+        }
     }
 
     override fun onResume() {
@@ -458,7 +479,7 @@ class CameraFragment : Fragment(), Detector.DetectorListener {
                 // I'll leave it as requested in previous step for consistency.
                 text = "${stat.name}: ${String.format("%.1f", weightKg)} kg (approx.)  |  ${String.format("%.1f", volumeL)} L (approx.)"
                 textSize = 14f
-                setTextColor(Color.parseColor("#424242"))
+                setTextColor(Color.parseColor("#E2E8F0"))
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                     bottomMargin = (4 * resources.displayMetrics.density).toInt()
@@ -467,7 +488,8 @@ class CameraFragment : Fragment(), Detector.DetectorListener {
 
             val progressIndicator = LinearProgressIndicator(requireContext()).apply {
                 trackCornerRadius = (4 * resources.displayMetrics.density).toInt()
-                trackColor = Color.parseColor("#EEEEEE")
+                trackColor = Color.parseColor("#1E293B")
+                trackThickness = (8 * resources.displayMetrics.density).toInt()
                 setIndicatorColor(stat.color)
                 layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (8 * resources.displayMetrics.density).toInt())
                 val progressVal = if(grandTotalWeight > 0) ((stat.totalWeight / grandTotalWeight) * 100).toInt() else 0

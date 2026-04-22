@@ -108,7 +108,7 @@
         android:id="@+id/zoomLevel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="24dp"
+        android:layout_marginBottom="16dp"
         android:background="@drawable/bg_hud_pill"
         android:paddingHorizontal="14dp"
         android:paddingVertical="6dp"
@@ -179,7 +179,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:textColor="#6B7DB3"
+                android:textColor="#8B9DC3"
                 android:textSize="14sp"
                 android:fontFamily="sans-serif"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -217,9 +217,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:paddingBottom="100dp">
+                    android:paddingBottom="120dp">
 
-                    <!-- No Detection Card with Error Handling Tips -->
+                    <!-- No Detection Card with Tips -->
                     <LinearLayout
                         android:id="@+id/noDetectionText"
                         android:layout_width="match_parent"
@@ -228,16 +228,17 @@
                         android:layout_marginTop="8dp"
                         android:background="@drawable/bg_error_card"
                         android:orientation="vertical"
-                        android:padding="20dp"
+                        android:padding="24dp"
                         android:gravity="center"
                         android:visibility="gone">
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="😕"
-                            android:textSize="36sp"
-                            android:layout_marginBottom="12dp" />
+                        <ImageView
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:layout_marginBottom="12dp"
+                            android:src="@drawable/ic_no_detection"
+                            android:contentDescription="No detection"
+                            app:tint="#8B9DC3" />
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -246,17 +247,17 @@
                             android:textColor="#FFFFFF"
                             android:textSize="18sp"
                             android:fontFamily="sans-serif-medium"
-                            android:layout_marginBottom="8dp" />
+                            android:layout_marginBottom="12dp" />
 
                         <TextView
                             android:id="@+id/noDetectionTips"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/no_detection_tips"
-                            android:textColor="#6B7DB3"
+                            android:textColor="#8B9DC3"
                             android:textSize="13sp"
-                            android:lineSpacingExtra="4dp"
-                            android:gravity="center" />
+                            android:lineSpacingExtra="5dp"
+                            android:gravity="start" />
                     </LinearLayout>
 
                     <!-- Detection List -->
@@ -278,7 +279,7 @@
                         android:layout_marginBottom="8dp"
                         android:text="Approx Freshness: --"
                         tools:text="Approx Freshness: 85% (12/14)"
-                        android:textColor="#4CAF50"
+                        android:textColor="#4ADE80"
                         android:textSize="14sp"
                         android:fontFamily="sans-serif-medium"
                         android:visibility="gone" />
@@ -290,8 +291,9 @@
                         android:layout_marginHorizontal="24dp"
                         android:layout_marginBottom="24dp"
                         app:trackCornerRadius="4dp"
-                        app:indicatorColor="#4CAF50"
-                        app:trackColor="#1A2640"
+                        app:trackThickness="8dp"
+                        app:indicatorColor="#4ADE80"
+                        app:trackColor="#1E293B"
                         android:visibility="gone" />
 
                     <!-- Species Ratio -->
@@ -304,7 +306,7 @@
                         android:text="Species Ratio"
                         android:textAllCaps="true"
                         android:letterSpacing="0.1"
-                        android:textColor="#6B7DB3"
+                        android:textColor="#CBD5E1"
                         android:textSize="12sp"
                         android:fontFamily="sans-serif-medium"
                         android:visibility="gone" />
@@ -312,13 +314,14 @@
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/cardSpeciesBar"
                         android:layout_width="match_parent"
-                        android:layout_height="24dp"
+                        android:layout_height="28dp"
                         android:layout_marginHorizontal="24dp"
                         android:layout_marginBottom="16dp"
-                        app:cardCornerRadius="12dp"
+                        app:cardCornerRadius="14dp"
                         app:cardElevation="0dp"
-                        app:strokeWidth="0dp"
-                        app:cardBackgroundColor="#1A2640"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="#2A3B5E"
+                        app:cardBackgroundColor="#1E293B"
                         android:visibility="gone">
 
                         <LinearLayout
@@ -347,7 +350,7 @@
                         android:text="Approx Biomass"
                         android:textAllCaps="true"
                         android:letterSpacing="0.1"
-                        android:textColor="#6B7DB3"
+                        android:textColor="#CBD5E1"
                         android:textSize="12sp"
                         android:fontFamily="sans-serif-medium"
                         android:visibility="gone" />
@@ -367,6 +370,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginHorizontal="16dp"
+                        android:layout_marginTop="8dp"
                         android:background="@drawable/bg_save_dialog"
                         android:gravity="center"
                         android:orientation="vertical"
@@ -421,18 +425,19 @@
 
     <!-- ── Bottom Controls ── -->
 
-    <!-- Main Capture FAB -->
+    <!-- Main Capture FAB - modern shutter button -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:src="@drawable/ic_camera"
+        android:src="@drawable/ic_shutter"
         android:translationZ="10dp"
         app:backgroundTint="#0891B2"
-        app:fabCustomSize="72dp"
-        app:maxImageSize="32dp"
+        app:fabCustomSize="68dp"
+        app:maxImageSize="36dp"
         app:tint="@color/white"
-        android:layout_marginBottom="90dp"
+        app:shapeAppearanceOverlay="@style/ShapeAppearance.Fab.Circle"
+        android:layout_marginBottom="24dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
@@ -443,14 +448,14 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="24dp"
-        android:layout_marginBottom="100dp"
         android:src="@drawable/ic_image"
         android:translationZ="10dp"
         app:backgroundTint="#1A2640"
-        app:fabSize="normal"
-        app:tint="#FFFFFF"
+        app:fabSize="mini"
+        app:tint="#8B9DC3"
         app:borderWidth="1dp"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toBottomOf="@+id/fab"
+        app:layout_constraintTop_toTopOf="@+id/fab"
         app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
