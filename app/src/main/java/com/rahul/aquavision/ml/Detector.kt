@@ -22,8 +22,12 @@ class Detector(
     private val context: Context,
     private val modelPath: String,
     private val labelPath: String,
-    private val detectorListener: DetectorListener,
+    private var detectorListener: DetectorListener,
 ) {
+
+    fun setListener(listener: DetectorListener) {
+        detectorListener = listener
+    }
 
     private var interpreter: Interpreter
     private var labels = mutableListOf<String>()

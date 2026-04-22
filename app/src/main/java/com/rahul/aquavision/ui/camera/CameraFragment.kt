@@ -56,6 +56,7 @@ import com.rahul.aquavision.data.SyncWorker
 import com.rahul.aquavision.databinding.FragmentCameraBinding
 import com.rahul.aquavision.ml.BoundingBox
 import com.rahul.aquavision.ml.Detector
+import com.rahul.aquavision.ml.DetectorCache
 import com.rahul.aquavision.ml.segmentation.utils.Utils
 import com.yalantis.ucrop.UCrop
 import java.io.File
@@ -204,13 +205,18 @@ class CameraFragment : Fragment(), Detector.DetectorListener {
 
         val appContext = requireContext().applicationContext
         cameraExecutor.execute {
-            // Initialize both models
-            // Standard/Small Model for Capture
-            detector = Detector(appContext, MODEL_PATH, LABELS_PATH, this)
-            // Nano Model for Real-time Preview
-            detectorNano = Detector(appContext, "model_nano.tflite", LABELS_PATH, this)
-
-            detectorEyes = Detector(appContext, "eyes_model.tflite", "eyes_labels.txt", eyesListener)
+            // Use cached models — only loads once, rebinds listeners on revisit
+            DetectorCache.getOrInit(
+                appContext = appContext,
+                modelPath = MODEL_PATH,
+                labelsPath = LABELS_PATH,
+                mainListener = this,
+                eyesListener = eyesListener
+            ) { main, nano, eyes ->
+                detector = main
+                detectorNano = nano
+                detectorEyes = eyes
+            }
         }
 
         setupRecyclerView()
@@ -814,10 +820,8 @@ class CameraFragment : Fragment(), Detector.DetectorListener {
 
     override fun onDestroy() {
         super.onDestroy()
-        // Close both detectors
-        detector?.close()
-        detectorNano?.close()
-        detectorEyes?.close()
+        // Don't close detectors — they're cached in DetectorCache for fast re-entry
+        // Only shutdown the executor thread
         if (::cameraExecutor.isInitialized) cameraExecutor.shutdown()
     }
 
