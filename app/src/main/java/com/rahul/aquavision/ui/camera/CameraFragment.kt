@@ -853,7 +853,6 @@ class CameraFragment : Fragment(), Detector.DetectorListener {
         val eyeCount = lastEyeResults.size
         val total = max(fishCount, eyeCount)
         binding.totalCountLabel.text = getString(R.string.total_detected, total)
-        binding.liveCountBadge.text = "Detecting: $total"
     }
 
     override fun onEmptyDetect() {
@@ -862,6 +861,7 @@ class CameraFragment : Fragment(), Detector.DetectorListener {
             if (_binding != null) {
                 binding.overlay.setResults(emptyList(), emptyList())
                 updateTotalCount()
+                binding.inferenceTime.text = "Detecting: 0"
                 binding.loadingProgress.visibility = View.GONE
 
                 // Show no-detection card with fade-in animation
