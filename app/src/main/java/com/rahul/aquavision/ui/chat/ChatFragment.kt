@@ -4,6 +4,8 @@ import android.content.Intent
 import android.graphics.Paint
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.widget.*
@@ -40,6 +42,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var progressBar: ProgressBar
 
     private var isGenerating = false
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     private val pickModelLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         if (uri != null) {
@@ -92,7 +95,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             pickModelLauncher.launch(arrayOf("*/*"))
         }
 
-        // --- NEW: Download Link Logic (Forces Browser) ---
+        // --- Download Link Logic (Forces Browser) ---
         tvDownloadLink.paintFlags = tvDownloadLink.paintFlags or Paint.UNDERLINE_TEXT_FLAG
 
         tvDownloadLink.setOnClickListener {
@@ -232,12 +235,24 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         tvStatus.setTextColor(0xFFFBBF24.toInt())
 
         lifecycleScope.launch(Dispatchers.IO) {
-            var currentResponse = ""
+            // ── Batched streaming: collect tokens on IO thread,
+            //    push UI updates at most every 80ms via Handler ──
+            val buffer = StringBuilder()
             var typingRemoved = false
+            var uiUpdatePending = false
+
+            val flushRunnable = Runnable {
+                uiUpdatePending = false
+                val snapshot = synchronized(buffer) { buffer.toString() }
+                chatAdapter.updateLastMessage(snapshot)
+                if (!rvChat.canScrollVertically(1)) {
+                    rvChat.scrollToPosition(chatAdapter.itemCount - 1)
+                }
+            }
 
             try {
                 llmHelper.generateResponse(userText).collect { partialString ->
-                    // Remove typing indicator on first token
+                    // Remove typing indicator on first token (once)
                     if (!typingRemoved) {
                         typingRemoved = true
                         withContext(Dispatchers.Main) {
@@ -247,18 +262,20 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                         }
                     }
 
-                    if (partialString.length > currentResponse.length && partialString.startsWith(currentResponse)) {
-                        currentResponse = partialString
-                    } else {
-                        currentResponse += partialString
+                    // Accumulate tokens in buffer (no main-thread switch per token)
+                    synchronized(buffer) {
+                        if (partialString.length > buffer.length && partialString.startsWith(buffer.toString())) {
+                            buffer.clear()
+                            buffer.append(partialString)
+                        } else {
+                            buffer.append(partialString)
+                        }
                     }
 
-                    withContext(Dispatchers.Main) {
-                        chatAdapter.updateLastMessage(currentResponse)
-                        // Auto-scroll to bottom during generation
-                        if (!rvChat.canScrollVertically(1)) {
-                            rvChat.scrollToPosition(chatAdapter.itemCount - 1)
-                        }
+                    // Schedule a throttled UI flush (at most once every 80ms)
+                    if (!uiUpdatePending) {
+                        uiUpdatePending = true
+                        mainHandler.postDelayed(flushRunnable, 80)
                     }
                 }
             } catch (e: Exception) {
@@ -271,7 +288,13 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 }
             }
 
+            // Final flush — ensure the complete response is shown
             withContext(Dispatchers.Main) {
+                mainHandler.removeCallbacks(flushRunnable)
+                val finalText = synchronized(buffer) { buffer.toString() }
+                chatAdapter.updateLastMessage(finalText)
+                rvChat.scrollToPosition(chatAdapter.itemCount - 1)
+
                 isGenerating = false
                 btnSend.alpha = 1f
                 tvStatus.text = getString(R.string.online)
