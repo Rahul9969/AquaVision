@@ -2,6 +2,14 @@ package com.rahul.aquavision.ui.chat
 
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
+import android.graphics.Typeface
+import android.os.Build
+import android.text.Html
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.BulletSpan
+import android.text.style.RelativeSizeSpan
+import android.text.style.StyleSpan
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -106,7 +114,7 @@ class ChatAdapter : RecyclerView.Adapter<ChatAdapter.ChatViewHolder>() {
                 aiRow.visibility = View.VISIBLE
                 val tvAiMessage = root.findViewById<TextView>(R.id.tvAiMessage)
                 val tvAiTime = root.findViewById<TextView>(R.id.tvAiTime)
-                tvAiMessage.text = message.text
+                tvAiMessage.text = formatMarkdown(message.text)
                 tvAiTime.text = timeFormat.format(Date(message.timestamp))
             }
         }
@@ -127,10 +135,59 @@ class ChatAdapter : RecyclerView.Adapter<ChatAdapter.ChatViewHolder>() {
             val root = holder.itemView
             if (!message.isUser && !message.isTyping) {
                 val tvAiMessage = root.findViewById<TextView>(R.id.tvAiMessage)
-                tvAiMessage?.text = message.text
+                tvAiMessage?.text = formatMarkdown(message.text)
             }
         } else {
             super.onBindViewHolder(holder, position, payloads)
+        }
+    }
+
+    /**
+     * Converts markdown-formatted text to a formatted Spanned for display.
+     * Handles: **bold**, * bullet points, ## headers, and paragraph spacing.
+     */
+    private fun formatMarkdown(raw: String): Spanned {
+        if (raw.isBlank()) return SpannableStringBuilder("")
+
+        // Step 1: Convert markdown to HTML
+        val html = raw
+            // Escape any actual HTML characters
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            // Headers: ## Header → <b><big>Header</big></b>
+            .replace(Regex("""^#{1,3}\s+(.+)$""", RegexOption.MULTILINE)) {
+                "<br><b><big>${it.groupValues[1].trim()}</big></b><br>"
+            }
+            // Bold: **text** → <b>text</b>
+            .replace(Regex("""\*\*(.+?)\*\*""")) {
+                "<b>${it.groupValues[1]}</b>"
+            }
+            // Italic: *text* (single asterisk not at line start) → <i>text</i>
+            .replace(Regex("""(?<=\s|^)\*(?!\s)(.+?)(?<!\s)\*(?=\s|$|[.,;:])""")) {
+                "<i>${it.groupValues[1]}</i>"
+            }
+            // Bullet points: lines starting with * or - → bullet character
+            .replace(Regex("""^\s*[\*\-]\s+(.+)$""", RegexOption.MULTILINE)) {
+                "&nbsp;&nbsp;• ${it.groupValues[1]}<br>"
+            }
+            // Numbered lists: lines starting with 1. 2. etc.
+            .replace(Regex("""^\s*(\d+)\.\s+(.+)$""", RegexOption.MULTILINE)) {
+                "&nbsp;&nbsp;${it.groupValues[1]}. ${it.groupValues[2]}<br>"
+            }
+            // Double newlines → paragraph break
+            .replace("\n\n", "<br><br>")
+            // Single newlines → line break
+            .replace("\n", "<br>")
+            // Clean up excessive <br>
+            .replace(Regex("""(<br>){3,}"""), "<br><br>")
+
+        // Step 2: Convert HTML to Spanned
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            Html.fromHtml(html, Html.FROM_HTML_MODE_COMPACT)
+        } else {
+            @Suppress("DEPRECATION")
+            Html.fromHtml(html)
         }
     }
 

@@ -275,7 +275,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     // Schedule a throttled UI flush (at most once every 80ms)
                     if (!uiUpdatePending) {
                         uiUpdatePending = true
-                        mainHandler.postDelayed(flushRunnable, 80)
+                        mainHandler.postDelayed(flushRunnable, 50)
                     }
                 }
             } catch (e: Exception) {
