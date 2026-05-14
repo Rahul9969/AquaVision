@@ -42,8 +42,10 @@ export default function DashboardPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
+      const token = localStorage.getItem('token');
+      const headers = { 'Authorization': `Bearer ${token}` };
       const [statsRes, logsRes] = await Promise.all([
-        fetch('/api/stats'), fetch('/api/logs?limit=50')
+        fetch('/api/stats', { headers }), fetch('/api/logs?limit=50', { headers })
       ]);
       const statsData = await statsRes.json();
       const logsData = await logsRes.json();
@@ -400,7 +402,8 @@ function ProtectedTab() {
   const [data, setData] = useState<{ totalProtectedDetections: number; speciesSummary: { species: string; count: number; lastSeen: string; locations: string[] }[] } | null>(null);
   const [expandedSpecies, setExpandedSpecies] = useState<string | null>(null);
   useEffect(() => {
-    fetch('/api/protected-species').then(r => r.json()).then(d => { if (d.success) setData(d.data); });
+    const token = localStorage.getItem('token');
+    fetch('/api/protected-species', { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()).then(d => { if (d.success) setData(d.data); });
   }, []);
   if (!data) return <div className="animate-spin w-6 h-6 border-2 border-t-transparent rounded-full mx-auto mt-12" style={{ borderColor: 'var(--spinner-color)', borderTopColor: 'transparent' }} />;
 
@@ -493,7 +496,8 @@ function ProtectedTab() {
 function UsersTab() {
   const [data, setData] = useState<{ totalUsers: number; users: { id: string; name: string; totalLogs: number; lastActive: string; protectedCount: number }[] } | null>(null);
   useEffect(() => {
-    fetch('/api/users').then(r => r.json()).then(d => { if (d.success) setData(d.data); });
+    const token = localStorage.getItem('token');
+    fetch('/api/users', { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()).then(d => { if (d.success) setData(d.data); });
   }, []);
   if (!data) return <div className="animate-spin w-6 h-6 border-2 border-t-transparent rounded-full mx-auto mt-12" style={{ borderColor: 'var(--spinner-color)', borderTopColor: 'transparent' }} />;
   return (
