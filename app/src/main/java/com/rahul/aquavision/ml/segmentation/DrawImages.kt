@@ -234,7 +234,37 @@ class DrawImages(private val context: Context) {
                 canvas.drawRect(left, top, right, bottom, boxPaint)
             }
 
-            val weightG = bio.a * measurements.lengthCm.pow(bio.b)
+            // --- Dual-Estimate Weight for maximum accuracy ---
+            //
+            // Method 1: Allometric (FishBase): W = a × L^b
+            //   Best when length is accurately measured via coin reference.
+            //
+            // Method 2: Volume-Density: W = volume × density
+            //   Fish tissue density ≈ 1.06 g/cm³ (slightly denser than water).
+            //   Adjusted for swim bladder / hollow spaces with species-specific correction.
+            //   Crabs and shrimp use density ≈ 1.15 g/cm³ (denser due to shell).
+            //
+            // Final weight = average of both → cancels out individual model errors.
+
+            val FISH_DENSITY_G_PER_CM3 = 1.06   // soft-body fish (density slightly > seawater)
+            val CRUST_DENSITY_G_PER_CM3 = 1.15  // crustaceans (shell adds density)
+
+            val density = when {
+                bestName.contains("crab", ignoreCase = true)   -> CRUST_DENSITY_G_PER_CM3
+                bestName.contains("shrimp", ignoreCase = true) -> CRUST_DENSITY_G_PER_CM3
+                bestName.contains("prawn", ignoreCase = true)  -> CRUST_DENSITY_G_PER_CM3
+                else                                            -> FISH_DENSITY_G_PER_CM3
+            }
+
+            val weightAllometric   = bio.a * measurements.lengthCm.pow(bio.b)
+            val weightDensity      = measurements.volumeCm3 * density
+
+            // Only average when volume is non-trivial (segmentation actually detected fish area)
+            val weightG = if (measurements.volumeCm3 > 1.0) {
+                (weightAllometric + weightDensity) / 2.0
+            } else {
+                weightAllometric  // fallback to allometric-only if volume is unreliable
+            }
 
             displayText = context.getString(R.string.fish_display_text, bestName, f0(weightG))
             detailedInfo = context.getString(
@@ -245,7 +275,7 @@ class DrawImages(private val context: Context) {
                 bio.a, bio.b,
                 f0(weightG),
                 f0(measurements.volumeCm3)
-            )
+            ) + "\n[Allometric: ${f0(weightAllometric)}g | Density: ${f0(weightDensity)}g]"
         }
 
         if (labelY < 30) labelY = 40f

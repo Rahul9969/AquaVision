@@ -86,7 +86,7 @@ class HistoryFragment : Fragment() {
 
         WorkManager.getInstance(requireContext()).enqueueUniqueWork(
             "HistoryUploadWork",
-            ExistingWorkPolicy.APPEND, // Use APPEND to queue behind current works
+            ExistingWorkPolicy.APPEND_OR_REPLACE, // Use APPEND_OR_REPLACE to recover from failed chains
             syncRequest
         )
     }

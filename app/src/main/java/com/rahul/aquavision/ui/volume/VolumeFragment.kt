@@ -545,7 +545,7 @@ class VolumeFragment : Fragment(), Detector.DetectorListener {
             .build()
         WorkManager.getInstance(context).enqueueUniqueWork(
             "HistoryUploadWork",
-            ExistingWorkPolicy.APPEND,
+            ExistingWorkPolicy.APPEND_OR_REPLACE,
             syncRequest
         )
     }

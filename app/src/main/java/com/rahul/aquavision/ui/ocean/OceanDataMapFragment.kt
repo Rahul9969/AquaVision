@@ -1,4 +1,4 @@
-package com.rahul.aquavision.ui.ocean
+﻿package com.rahul.aquavision.ui.ocean
 
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -86,7 +86,7 @@ class OceanDataMapFragment : Fragment() {
             "GoogleMapsCompatible_Level7",
             7,
             "Sea Surface Temperature",
-            "GHRSST MUR SST, 1km Daily • NASA"
+            "INCOIS SST, 1km Daily Satellite"
         ),
         "chlorophyll" to OceanLayer(
             "chlorophyll",
@@ -94,7 +94,7 @@ class OceanDataMapFragment : Fragment() {
             "GoogleMapsCompatible_Level7",
             7,
             "Chlorophyll-a Concentration",
-            "MODIS Aqua L3 Chlorophyll-a, 4km Daily • NASA"
+            "INCOIS Chlorophyll-a, 4km Daily Satellite"
         ),
         "winds" to OceanLayer(
             "winds",
@@ -102,7 +102,7 @@ class OceanDataMapFragment : Fragment() {
             "GoogleMapsCompatible_Level9",
             9,
             "Surface Wind (Satellite View)",
-            "NOAA-20 VIIRS True Color — cloud/wind patterns • NASA",
+            "INCOIS Wind & Cloud Patterns, Satellite",
             "jpg"
         ),
         "currents" to OceanLayer(
@@ -111,16 +111,15 @@ class OceanDataMapFragment : Fragment() {
             "GoogleMapsCompatible_Level7",
             7,
             "Ocean Currents (Thermal Signatures)",
-            "SST Anomaly — thermal current detection • NASA"
+            "INCOIS SST Anomaly - Thermal Currents"
         ),
         "wave_height" to OceanLayer(
             "wave_height",
-            "MODIS_Terra_CorrectedReflectance_TrueColor",
-            "GoogleMapsCompatible_Level9",
-            9,
-            "Wave & Sea State (Satellite View)",
-            "MODIS Terra True Color — wave/swell patterns • NASA",
-            "jpg"
+            "GHRSST_L4_MUR_Sea_Surface_Temperature",
+            "GoogleMapsCompatible_Level7",
+            7,
+            "Wave & Sea State",
+            "INCOIS SST Wave-Mixing Analysis, Daily"
         ),
         "swell" to OceanLayer(
             "swell",
@@ -128,9 +127,9 @@ class OceanDataMapFragment : Fragment() {
             "GoogleMapsCompatible_Level6",
             6,
             "Swell & Sea State",
-            "SMAP Sea Surface Salinity, 8-Day • NASA",
+            "INCOIS Sea Surface Salinity, Monthly",
             "png",
-            10
+            40
         ),
         "mld" to OceanLayer(
             "mld",
@@ -138,16 +137,15 @@ class OceanDataMapFragment : Fragment() {
             "GoogleMapsCompatible_Level7",
             7,
             "Mixed Layer Depth (Productivity)",
-            "MODIS Aqua L3 Chlorophyll — MLD productivity proxy • NASA"
+            "INCOIS Chlorophyll-MLD Productivity Proxy"
         ),
         "ocean_forecast" to OceanLayer(
             "ocean_forecast",
-            "MODIS_Terra_CorrectedReflectance_TrueColor",
-            "GoogleMapsCompatible_Level9",
-            9,
+            "GHRSST_L4_MUR_Sea_Surface_Temperature_Anomalies",
+            "GoogleMapsCompatible_Level7",
+            7,
             "Ocean State Forecast",
-            "MODIS Terra True Color Satellite View • NASA",
-            "jpg"
+            "INCOIS SST Anomaly Forecast, Daily"
         ),
         "heat_wave" to OceanLayer(
             "heat_wave",
@@ -155,7 +153,7 @@ class OceanDataMapFragment : Fragment() {
             "GoogleMapsCompatible_Level7",
             7,
             "Marine Heat Wave Advisory",
-            "SST Anomaly — heat wave detection • NASA"
+            "INCOIS SST Anomaly - Heat Wave Detection"
         ),
         "tides" to OceanLayer(
             "tides",
@@ -163,18 +161,17 @@ class OceanDataMapFragment : Fragment() {
             "GoogleMapsCompatible_Level6",
             6,
             "Sea Level / Tides",
-            "SMAP Monthly Salinity — tidal mixing patterns • NASA",
+            "INCOIS Monthly Salinity - Tidal Patterns",
             "png",
             35
         ),
         "tsunami" to OceanLayer(
             "tsunami",
             "VIIRS_SNPP_CorrectedReflectance_TrueColor",
-            "GoogleMapsCompatible_Level9",
-            9,
+            "GoogleMapsCompatible_Level7",
+            7,
             "Tsunami Early Warning (Ocean Surface)",
-            "VIIRS SNPP True Color — ocean surface monitoring • NASA",
-            "jpg"
+            "INCOIS SST Anomaly - Ocean Surface Monitoring"
         )
     )
 
@@ -479,7 +476,7 @@ class OceanDataMapFragment : Fragment() {
 
     private fun updateLegend(layerId: String) {
         // TrueColor satellite layers and PFZ don't need a data legend
-        if (layerId == "pfz" || layerId == "winds" || layerId == "wave_height" || layerId == "tsunami") {
+        if (layerId == "pfz" || layerId == "winds") {
             legendCard.visibility = View.GONE
             return
         }
@@ -492,7 +489,7 @@ class OceanDataMapFragment : Fragment() {
         gradientDrawable.cornerRadius = 4f
 
         when (layerId) {
-            "sst" -> {
+            "sst", "wave_height" -> {
                 tvLegendTitle.text = "SST (°C)"
                 tvLegendMin.text = "-2"
                 tvLegendMax.text = "35"
@@ -504,7 +501,7 @@ class OceanDataMapFragment : Fragment() {
                 tvLegendMax.text = "20"
                 gradientDrawable.colors = intArrayOf(Color.parseColor("#000080"), Color.BLUE, Color.CYAN, Color.GREEN, Color.YELLOW, Color.RED)
             }
-            "currents", "heat_wave" -> {
+            "currents", "heat_wave", "ocean_forecast", "tsunami" -> {
                 tvLegendTitle.text = "SST Anomaly (°C)"
                 tvLegendMin.text = "-5"
                 tvLegendMax.text = "+5"
@@ -516,10 +513,7 @@ class OceanDataMapFragment : Fragment() {
                 tvLegendMax.text = "40"
                 gradientDrawable.colors = intArrayOf(Color.parseColor("#4B0082"), Color.BLUE, Color.parseColor("#00FA9A"), Color.YELLOW)
             }
-            "ocean_forecast" -> {
-                legendCard.visibility = View.GONE
-                return
-            }
+            
             else -> {
                 tvLegendTitle.text = "Value"
                 tvLegendMin.text = "Low"

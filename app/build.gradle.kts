@@ -31,8 +31,7 @@ android {
             localProps.load(localPropsFile.inputStream())
         }
         buildConfigField("String", "CLOUDINARY_CLOUD_NAME", "\"${localProps.getProperty("CLOUDINARY_CLOUD_NAME", "")}\"")
-        buildConfigField("String", "CLOUDINARY_API_KEY", "\"${localProps.getProperty("CLOUDINARY_API_KEY", "")}\"")
-        buildConfigField("String", "CLOUDINARY_API_SECRET", "\"${localProps.getProperty("CLOUDINARY_API_SECRET", "")}\"")
+        buildConfigField("String", "CLOUDINARY_UPLOAD_PRESET", "\"${localProps.getProperty("CLOUDINARY_UPLOAD_PRESET", "unsigned_preset")}\"")
     }
 
     buildTypes {

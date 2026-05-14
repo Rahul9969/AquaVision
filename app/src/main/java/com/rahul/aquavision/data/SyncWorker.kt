@@ -20,15 +20,12 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
     private val firestore by lazy { FirebaseFirestore.getInstance() }
 
     private val CLOUD_NAME = com.rahul.aquavision.BuildConfig.CLOUDINARY_CLOUD_NAME
-    private val API_KEY = com.rahul.aquavision.BuildConfig.CLOUDINARY_API_KEY
-    private val API_SECRET = com.rahul.aquavision.BuildConfig.CLOUDINARY_API_SECRET
+    private val UPLOAD_PRESET = com.rahul.aquavision.BuildConfig.CLOUDINARY_UPLOAD_PRESET
 
     override suspend fun doWork(): Result {
         return try {
             val cloudinary = Cloudinary(ObjectUtils.asMap(
                 "cloud_name", CLOUD_NAME,
-                "api_key", API_KEY,
-                "api_secret", API_SECRET,
                 "secure", true
             ))
 
@@ -46,13 +43,28 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
             val unsyncedList = dbHelper.getUnsyncedLogs()
             if (unsyncedList.isEmpty()) return Result.success()
 
+            var failedCount = 0
             for ((index, item) in unsyncedList.withIndex()) {
                 val progress = "Syncing ${index + 1}/${unsyncedList.size}: ${item.title}"
                 setProgress(workDataOf("status" to progress, "is_syncing" to true))
 
-                uploadLogItem(cloudinary, item, userId, userName, userPfp)
+                try {
+                    uploadLogItem(cloudinary, item, userId, userName, userPfp)
+                    dbHelper.markAsSynced(item.id)
+                } catch (itemError: Exception) {
+                    Log.e("SyncWorker", "Failed to sync item ${item.id}: ${itemError.message}", itemError)
+                    failedCount++
+                    // Continue with other items instead of aborting
+                }
+            }
 
-                dbHelper.markAsSynced(item.id)
+            if (failedCount > 0 && failedCount == unsyncedList.size) {
+                // All items failed — retry if under max attempts, else fail
+                if (runAttemptCount < 5) {
+                    Log.w("SyncWorker", "All $failedCount items failed, scheduling retry (attempt $runAttemptCount)")
+                    return Result.retry()
+                }
+                return Result.failure(workDataOf("error_message" to "$failedCount items failed to sync"))
             }
 
             setProgress(workDataOf("status" to "Sync Complete", "is_syncing" to false))
@@ -60,6 +72,10 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
 
         } catch (e: Exception) {
             Log.e("SyncWorker", "Sync failed: ${e.message}", e)
+            // Retry on transient errors instead of failing (which poisons the APPEND chain)
+            if (runAttemptCount < 5) {
+                return Result.retry()
+            }
             Result.failure(workDataOf("error_message" to (e.message ?: "Unknown error")))
         }
     }
@@ -111,7 +127,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
             )
         )
 
-        firestore.collection("history").add(logData).await()
+        firestore.collection("history").document("${userId}_${item.id}").set(logData).await()
     }
 
     private suspend fun uploadImage(cloudinary: Cloudinary, file: File): String = withContext(Dispatchers.IO) {
@@ -119,7 +135,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
             "folder", "fish_app_history",
             "resource_type", "image"
         )
-        val result = cloudinary.uploader().upload(file, params)
+        val result = cloudinary.uploader().unsignedUpload(file, UPLOAD_PRESET, params)
         return@withContext result["secure_url"] as String
     }
 }

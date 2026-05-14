@@ -48,6 +48,7 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.chip.Chip
 import com.google.android.material.progressindicator.LinearProgressIndicator
 import com.rahul.aquavision.R
+import com.rahul.aquavision.data.Constants
 import com.rahul.aquavision.data.Constants.LABELS_PATH
 import com.rahul.aquavision.data.Constants.MODEL_PATH
 import com.rahul.aquavision.data.DatabaseHelper
@@ -57,8 +58,15 @@ import com.rahul.aquavision.databinding.FragmentCameraBinding
 import com.rahul.aquavision.ml.BoundingBox
 import com.rahul.aquavision.ml.Detector
 import com.rahul.aquavision.ml.DetectorCache
+import com.rahul.aquavision.ml.segmentation.AnalysisResult
+import com.rahul.aquavision.ml.segmentation.DrawImages
+import com.rahul.aquavision.ml.segmentation.InstanceSegmentation
+import com.rahul.aquavision.ml.segmentation.Success
 import com.rahul.aquavision.ml.segmentation.utils.Utils
 import com.yalantis.ucrop.UCrop
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import org.opencv.android.OpenCVLoader
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Locale
@@ -90,6 +98,15 @@ class CameraFragment : Fragment(), Detector.DetectorListener {
     private var detector: Detector? = null      // High accuracy (Small) model for capture
     private var detectorNano: Detector? = null  // Fast (Nano) model for preview
     private var detectorEyes: Detector? = null
+
+    // --- Segmentation pipeline (coin reference + fish mask) ---
+    private var coinSegmentation: InstanceSegmentation? = null
+    private var fishSegmentation: InstanceSegmentation? = null
+    private lateinit var drawImages: DrawImages
+    private val segmentationMutex = Mutex()
+    private var lastAnalysisResults: List<AnalysisResult>? = null
+    private var lastCoinScalePxPerCm: Float = 50.0f   // default fallback scale
+    private var lastCoinDetected: Boolean = false
 
     private lateinit var cameraExecutor: ExecutorService
     private var isCameraRunning = true
@@ -201,7 +218,22 @@ class CameraFragment : Fragment(), Detector.DetectorListener {
         super.onViewCreated(view, savedInstanceState)
 
         dbHelper = DatabaseHelper(requireContext())
-        cameraExecutor = Executors.newSingleThreadExecutor()
+        // 3 threads: camera analysis + species/eyes model threads
+        cameraExecutor = Executors.newFixedThreadPool(3)
+
+        // Initialise OpenCV (required for VolumeCalculator contour ops)
+        OpenCVLoader.initDebug()
+
+        drawImages = DrawImages(requireContext())
+
+        // Initialise segmentation models
+        coinSegmentation = InstanceSegmentation(
+            requireContext(), Constants.COIN_MODEL_PATH, null, "Coin", 5
+        ) { Log.e(TAG, "Coin model error: $it") }
+
+        fishSegmentation = InstanceSegmentation(
+            requireContext(), Constants.SEG_MODEL_PATH, null, "Fish", 5
+        ) { Log.e(TAG, "Fish seg error: $it") }
 
         val appContext = requireContext().applicationContext
         cameraExecutor.execute {
@@ -349,16 +381,12 @@ class CameraFragment : Fragment(), Detector.DetectorListener {
 
                         clearDetections()
 
-                        cameraExecutor.execute {
-                            // Use High Accuracy (Small) Model for final result
-                            detector?.detect(bmp)
-                            detectorEyes?.detect(bmp)
-                        }
+                        // ── Run all 4 models in PARALLEL ──
+                        cameraExecutor.execute { detector?.detect(bmp) }
+                        cameraExecutor.execute { detectorEyes?.detect(bmp) }
+                        // Coin + segmentation pipeline runs on a coroutine using the lifecycle scope
+                        runSegmentationPipeline(bmp)
                     }
-
-                    binding.saveDialog.visibility = View.VISIBLE
-                    calculateSpeciesDistribution(lastResults)
-                    calculateBiomass(lastResults)
 
                     // Panel will slide up when onDetect() fires with results
                     slidePanelUp()
@@ -387,7 +415,61 @@ class CameraFragment : Fragment(), Detector.DetectorListener {
         }
     }
 
+    /** Fallback biomass estimate using species lookup table when segmentation finds no fish. */
+    private data class SpeciesBiomass(val name: String, val totalWeight: Double, val totalVolume: Double, val color: Int)
+
+    private fun calculateBiomass(boxes: List<BoundingBox>) {
+        if (boxes.isEmpty()) {
+            binding.tvBiomassTitle.visibility = View.GONE
+            binding.biomassListContainer.visibility = View.GONE
+            return
+        }
+        binding.biomassListContainer.removeAllViews()
+        val grouped = boxes.groupBy { it.clsName }
+        var grandTotalWeight = 0.0
+        var grandTotalVolume = 0.0
+        val speciesStats = mutableListOf<SpeciesBiomass>()
+        for ((species, sBoxes) in grouped) {
+            val count = sBoxes.size
+            val info = SpeciesRepository.getSpeciesInfo(species)
+            grandTotalWeight += count * info.avgWeight
+            grandTotalVolume += count * info.avgVolume
+            speciesStats.add(SpeciesBiomass(species, count * info.avgWeight, count * info.avgVolume, speciesColorMap[species] ?: Color.GRAY))
+        }
+        val totalKg = grandTotalWeight / 1000.0
+        val totalLiters = grandTotalVolume / 1000.0
+        binding.tvBiomassTitle.text = "Biomass (est.): ${String.format("%.2f", totalKg)} kg | ${String.format("%.2f", totalLiters)} L"
+        for (stat in speciesStats.sortedByDescending { it.totalWeight }) {
+            val rowLayout = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                    bottomMargin = (12 * resources.displayMetrics.density).toInt()
+                }
+            }
+            val infoText = TextView(requireContext()).apply {
+                text = "${stat.name}: ${String.format("%.0f", stat.totalWeight)}g (est.) | ${String.format("%.0f", stat.totalVolume)} cm³ (est.)"
+                textSize = 13f
+                setTextColor(Color.parseColor("#E2E8F0"))
+                setTypeface(null, android.graphics.Typeface.BOLD)
+            }
+            val progressIndicator = com.google.android.material.progressindicator.LinearProgressIndicator(requireContext()).apply {
+                trackCornerRadius = (4 * resources.displayMetrics.density).toInt()
+                trackColor = Color.parseColor("#1E293B")
+                trackThickness = (8 * resources.displayMetrics.density).toInt()
+                setIndicatorColor(stat.color)
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (8 * resources.displayMetrics.density).toInt())
+                progress = if (grandTotalWeight > 0) ((stat.totalWeight / grandTotalWeight) * 100).toInt() else 0
+            }
+            rowLayout.addView(infoText)
+            rowLayout.addView(progressIndicator)
+            binding.biomassListContainer.addView(rowLayout)
+        }
+        binding.tvBiomassTitle.visibility = View.VISIBLE
+        binding.biomassListContainer.visibility = View.VISIBLE
+    }
+
     private fun calculateSpeciesDistribution(boxes: List<BoundingBox>) {
+
         if (boxes.isEmpty()) {
             binding.tvSpeciesRatioTitle.visibility = View.GONE
             binding.cardSpeciesBar.visibility = View.GONE
@@ -428,72 +510,151 @@ class CameraFragment : Fragment(), Detector.DetectorListener {
         binding.speciesLegendGroup.visibility = View.VISIBLE
     }
 
-    private data class SpeciesBiomass(val name: String, val totalWeight: Double, val totalVolume: Double, val color: Int)
+    // ──────────────────────────────────────────────────────────────────
+    //  SEGMENTATION PIPELINE: coin reference + fish mask → real volume
+    // ──────────────────────────────────────────────────────────────────
+    private fun runSegmentationPipeline(bitmap: Bitmap) {
+        lifecycleScope.launch(Dispatchers.Default) {
+            segmentationMutex.withLock {
+                var coinResults = emptyList<com.rahul.aquavision.ml.segmentation.SegmentationResult>()
+                var activePxPerCm = 50.0f   // fallback if coin not found
+                var coinFound = false
 
-    private fun calculateBiomass(boxes: List<BoundingBox>) {
-        if (boxes.isEmpty()) {
-            binding.tvBiomassTitle.visibility = View.GONE
-            binding.biomassListContainer.visibility = View.GONE
+                // Step A: detect coin → derive pixelsPerCm
+                try {
+                    coinSegmentation?.invoke(
+                        frame = bitmap,
+                        smoothEdges = false,
+                        onSuccess = { success ->
+                            coinResults = success.results
+                            if (coinResults.isNotEmpty()) {
+                                val coinBox = coinResults.first().box
+                                val widthPx  = coinBox.w * bitmap.width
+                                val heightPx = coinBox.h * bitmap.height
+                                val diameterPx = max(widthPx, heightPx)
+                                activePxPerCm = diameterPx / 2.7f  // Indian ₹10 coin = 27mm = 2.7cm diameter
+                                coinFound = true
+                            }
+                        },
+                        onFailure = { Log.e(TAG, "Coin model failed: $it") }
+                    )
+                } catch (e: Exception) { Log.e(TAG, "Coin model exception", e) }
+
+                lastCoinScalePxPerCm = activePxPerCm
+                lastCoinDetected = coinFound
+
+                // Step B: segment fish bodies
+                var fishSuccess: Success? = null
+                try {
+                    fishSegmentation?.invoke(
+                        frame = bitmap,
+                        smoothEdges = false,
+                        onSuccess = { success -> fishSuccess = success },
+                        onFailure = { Log.e(TAG, "Fish seg model failed: $it") }
+                    )
+                } catch (e: Exception) { Log.e(TAG, "Fish seg exception", e) }
+
+                val finalFish = fishSuccess ?: Success(0, 0, 0, emptyList())
+
+                // Step C: draw overlays and compute per-fish measurements
+                // We need lastResults (species boxes) — wait until they're available
+                // (they arrive from onDetect which may have run already)
+                val speciesBoxes = lastResults   // snapshot
+
+                val analysisResults = drawImages.invoke(
+                    original      = bitmap,
+                    success       = finalFish,
+                    coinResults   = coinResults,
+                    isSeparateOut = false,
+                    isMaskOut     = false,
+                    speciesBoxes  = speciesBoxes,
+                    pixelsPerCm   = activePxPerCm,
+                    isMarkerDetected = coinFound
+                )
+
+                lastAnalysisResults = analysisResults
+
+                // Update UI on main thread
+                launch(Dispatchers.Main) {
+                    if (_binding == null) return@launch
+                    displaySegmentationResults(analysisResults, coinFound, activePxPerCm, speciesBoxes)
+                }
+            }
+        }
+    }
+
+    /**
+     * Updates the Approx Biomass panel with real measured values from the segmentation pipeline.
+     * Falls back to lookup-table estimates if segmentation found nothing.
+     */
+    private fun displaySegmentationResults(
+        analysisResults: List<AnalysisResult>,
+        coinDetected: Boolean,
+        pxPerCm: Float,
+        speciesBoxes: List<BoundingBox>
+    ) {
+        if (_binding == null) return
+        if (analysisResults.isEmpty()) {
+            // Segmentation found no fish — fall back to lookup-table
+            calculateBiomass(lastResults)
             return
         }
 
         binding.biomassListContainer.removeAllViews()
 
-        val grouped = boxes.groupBy { it.clsName }
-        var grandTotalWeight = 0.0
-        var grandTotalVolume = 0.0
-        val speciesStats = mutableListOf<SpeciesBiomass>()
+        var grandTotalWeightG = 0.0
+        var grandTotalVolumeCm3 = 0.0
 
-        for ((species, speciesBoxes) in grouped) {
-            val count = speciesBoxes.size
-            val info = SpeciesRepository.getSpeciesInfo(species)
-            val totalSpeciesWeight = count * info.avgWeight
-            val totalSpeciesVolume = count * info.avgVolume
-            val color = speciesColorMap[species] ?: Color.GRAY
+        // Parse each fish result from the description string (produced by DrawImages)
+        // Format: "Est. Weight: 450g\nVolume: 312 cm³\n..."
+        val weightPattern = Regex("Est\\.\\s*Weight:\\s*([\\d.]+)g")
+        val volumePattern  = Regex("Volume:\\s*([\\d.]+)")
 
-            grandTotalWeight += totalSpeciesWeight
-            grandTotalVolume += totalSpeciesVolume
+        for ((idx, result) in analysisResults.withIndex()) {
+            val desc = result.description
+            val weightG   = weightPattern.find(desc)?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.0
+            val volumeCm3 = volumePattern.find(desc)?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.0
 
-            speciesStats.add(SpeciesBiomass(species, totalSpeciesWeight, totalSpeciesVolume, color))
-        }
+            grandTotalWeightG   += weightG
+            grandTotalVolumeCm3 += volumeCm3
 
-        val sortedStats = speciesStats.sortedByDescending { it.totalWeight }
-        val totalKg = grandTotalWeight / 1000.0
-        val totalLiters = grandTotalVolume / 1000.0
+            // Species name for this fish
+            val speciesName = if (speciesBoxes.isNotEmpty() && idx < speciesBoxes.size)
+                speciesBoxes[idx].clsName else "Fish ${idx + 1}"
+            val color = speciesColorMap[speciesName] ?: Color.parseColor("#22D3EE")
 
-        // UPDATED: "Approx Biomass"
-        binding.tvBiomassTitle.text = "Approx Biomass (Total: ${String.format("%.2f", totalKg)} kg | ${String.format("%.2f", totalLiters)} L)"
-
-        for (stat in sortedStats) {
             val rowLayout = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.VERTICAL
-                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                    bottomMargin = (12 * resources.displayMetrics.density).toInt()
-                }
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { bottomMargin = (12 * resources.displayMetrics.density).toInt() }
             }
 
-            val weightKg = stat.totalWeight / 1000.0
-            val volumeL = stat.totalVolume / 1000.0
+            val weightKg   = weightG / 1000.0
+            val volumeL    = volumeCm3 / 1000.0
+            val measuredBy = if (coinDetected) "🪙 Coin ref. measured" else "⚠️ Est. (no coin)"
             val infoText = TextView(requireContext()).apply {
-                // Keep "approx" per line if you wish, or remove it since the title says it.
-                // I'll leave it as requested in previous step for consistency.
-                text = "${stat.name}: ${String.format("%.1f", weightKg)} kg (approx.)  |  ${String.format("%.1f", volumeL)} L (approx.)"
-                textSize = 14f
+                text = "$speciesName: ${String.format("%.0f", weightG)}g (${String.format("%.0f", volumeCm3)} cm³)  ·  $measuredBy"
+                textSize = 13f
                 setTextColor(Color.parseColor("#E2E8F0"))
                 setTypeface(null, android.graphics.Typeface.BOLD)
-                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                    bottomMargin = (4 * resources.displayMetrics.density).toInt()
-                }
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { bottomMargin = (4 * resources.displayMetrics.density).toInt() }
             }
 
-            val progressIndicator = LinearProgressIndicator(requireContext()).apply {
+            val progressIndicator = com.google.android.material.progressindicator.LinearProgressIndicator(requireContext()).apply {
                 trackCornerRadius = (4 * resources.displayMetrics.density).toInt()
-                trackColor = Color.parseColor("#1E293B")
-                trackThickness = (8 * resources.displayMetrics.density).toInt()
-                setIndicatorColor(stat.color)
-                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (8 * resources.displayMetrics.density).toInt())
-                val progressVal = if(grandTotalWeight > 0) ((stat.totalWeight / grandTotalWeight) * 100).toInt() else 0
-                progress = progressVal
+                trackColor        = Color.parseColor("#1E293B")
+                trackThickness    = (8 * resources.displayMetrics.density).toInt()
+                setIndicatorColor(color)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    (8 * resources.displayMetrics.density).toInt()
+                )
+                progress = ((weightG / (grandTotalWeightG + 1.0)) * 100).toInt().coerceIn(1, 100)
             }
 
             rowLayout.addView(infoText)
@@ -501,7 +662,16 @@ class CameraFragment : Fragment(), Detector.DetectorListener {
             binding.biomassListContainer.addView(rowLayout)
         }
 
-        binding.tvBiomassTitle.visibility = View.VISIBLE
+        val totalKg    = grandTotalWeightG / 1000.0
+        val totalLiters = grandTotalVolumeCm3 / 1000.0
+        val scaleInfo   = if (coinDetected)
+            "${String.format("%.1f", pxPerCm)} px/cm (coin)"
+        else
+            "est. scale"
+        binding.tvBiomassTitle.text =
+            "Biomass: ${String.format("%.3f", totalKg)} kg | ${String.format("%.3f", totalLiters)} L  [$scaleInfo]"
+
+        binding.tvBiomassTitle.visibility   = View.VISIBLE
         binding.biomassListContainer.visibility = View.VISIBLE
     }
 
@@ -568,10 +738,10 @@ class CameraFragment : Fragment(), Detector.DetectorListener {
 
                 clearDetections()
 
-                cameraExecutor.execute {
-                    detector?.detect(bitmap)
-                    detectorEyes?.detect(bitmap)
-                }
+                // ── Run both models in PARALLEL ──
+                cameraExecutor.execute { detector?.detect(bitmap) }
+                cameraExecutor.execute { detectorEyes?.detect(bitmap) }
+                runSegmentationPipeline(bitmap)
             } else {
                 Toast.makeText(context, "Failed to load image", Toast.LENGTH_SHORT).show()
             }
@@ -826,7 +996,7 @@ class CameraFragment : Fragment(), Detector.DetectorListener {
     private fun triggerBackgroundSync(context: Context) {
         val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
         val syncRequest = OneTimeWorkRequest.Builder(SyncWorker::class.java).setConstraints(constraints).setBackoffCriteria(BackoffPolicy.LINEAR, 10, TimeUnit.SECONDS).build()
-        WorkManager.getInstance(context).enqueueUniqueWork("HistoryUploadWork", ExistingWorkPolicy.APPEND, syncRequest)
+        WorkManager.getInstance(context).enqueueUniqueWork("HistoryUploadWork", ExistingWorkPolicy.APPEND_OR_REPLACE, syncRequest)
     }
 
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all { ContextCompat.checkSelfPermission(requireContext(), it) == PackageManager.PERMISSION_GRANTED }
@@ -845,6 +1015,14 @@ class CameraFragment : Fragment(), Detector.DetectorListener {
         // Don't close detectors — they're cached in DetectorCache for fast re-entry
         // Only shutdown the executor thread
         if (::cameraExecutor.isInitialized) cameraExecutor.shutdown()
+        lifecycleScope.launch(Dispatchers.IO) {
+            segmentationMutex.withLock {
+                coinSegmentation?.close()
+                fishSegmentation?.close()
+                coinSegmentation = null
+                fishSegmentation = null
+            }
+        }
     }
 
     private fun updateTotalCount() {
@@ -927,10 +1105,11 @@ class CameraFragment : Fragment(), Detector.DetectorListener {
 
                 if (!isCameraRunning) {
                     calculateSpeciesDistribution(boundingBoxes)
-                    calculateBiomass(boundingBoxes)
                     checkForProtectedSpecies(boundingBoxes)
-                    // Slide panel up when results land after capture
+                    // Slide panel up & show save dialog once results are ready
                     slidePanelUp()
+                    binding.saveDialog.visibility = View.VISIBLE
+                    // Note: biomass is updated by runSegmentationPipeline which runs in parallel
                 }
             }
         }
@@ -1037,7 +1216,7 @@ class CameraFragment : Fragment(), Detector.DetectorListener {
                 // Trigger sync
                 val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
                 val syncRequest = OneTimeWorkRequest.Builder(SyncWorker::class.java).setConstraints(constraints).build()
-                WorkManager.getInstance(appContext).enqueueUniqueWork("HistoryUploadWork", ExistingWorkPolicy.APPEND, syncRequest)
+                WorkManager.getInstance(appContext).enqueueUniqueWork("HistoryUploadWork", ExistingWorkPolicy.APPEND_OR_REPLACE, syncRequest)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to log protected species", e)
             }

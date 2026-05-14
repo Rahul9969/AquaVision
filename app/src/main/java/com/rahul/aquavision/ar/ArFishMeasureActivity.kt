@@ -541,7 +541,7 @@ class ArFishMeasureActivity : ComponentActivity() {
 
             val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
             val syncRequest = OneTimeWorkRequest.Builder(SyncWorker::class.java).setConstraints(constraints).setBackoffCriteria(BackoffPolicy.LINEAR, 10, TimeUnit.SECONDS).build()
-            WorkManager.getInstance(context).enqueueUniqueWork("HistoryUploadWork", ExistingWorkPolicy.APPEND, syncRequest)
+            WorkManager.getInstance(context).enqueueUniqueWork("HistoryUploadWork", ExistingWorkPolicy.APPEND_OR_REPLACE, syncRequest)
 
             runOnUiThread {
                 Toast.makeText(context, "Measurement Saved!", Toast.LENGTH_SHORT).show()

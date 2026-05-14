@@ -1,4 +1,4 @@
-<resources>
+﻿<resources>
     <string name="app_name">AquaVision</string>
     <string name="gpu">GPU</string>
 
@@ -19,12 +19,12 @@
     <string name="patreon_message">Support me at Patreon</string>
     <string name="settings">Settings</string>
     <string name="smooth_edges">Smooth Edges</string>
-    <string name="choose_language">Choose Language / மொழி</string>
+    <string name="choose_language">Choose Language / à®®à¯Šà®´à®¿</string>
     <string name="language_english">English</string>
-    <string name="language_hindi">हिन्दी (Hindi)</string>
-    <string name="language_tamil">தமிழ் (Tamil)</string>
-    <string name="language_malayalam">മലയാളം (Malayalam)</string>
-    <string name="language_telugu">తెలుగు (Telugu)</string>
+    <string name="language_hindi">à¤¹à¤¿à¤¨à¥à¤¦à¥€ (Hindi)</string>
+    <string name="language_tamil">à®¤à®®à®¿à®´à¯ (Tamil)</string>
+    <string name="language_malayalam">à´®à´²à´¯à´¾à´³à´‚ (Malayalam)</string>
+    <string name="language_telugu">à°¤à±†à°²à±à°—à± (Telugu)</string>
     <string name="syncing_data">Syncing data...</string>
     <string name="data_synced_successfully">Data Synced Successfully</string>
     <string name="sync_failed">Sync Failed</string>
@@ -125,14 +125,14 @@
     <string name="coin_display_text">Coin (10Rs) | Dia: %1$scm</string>
     <string name="coin_detailed_info">Type: 10 Rupee Coin\nDimensions: %1$scm x %2$scm\nEst. Scale: %3$s px/cm</string>
     <string name="fish_display_text">%1$s | %2$sg</string>
-    <string name="fish_detailed_info">Species: %1$s\nDim: L:%2$scm x W:%3$scm\nConst: a=%4$s, b=%5$s\nEst. Weight: %6$sg\nEst. Volume: %7$scm³</string>
+    <string name="fish_detailed_info">Species: %1$s\nDim: L:%2$scm x W:%3$scm\nConst: a=%4$s, b=%5$s\nEst. Weight: %6$sg\nEst. Volume: %7$scmÂ³</string>
     <string name="no_internet_connection">No Internet Connection</string>
-    <string name="use_coin_reference">Use 10 ₹ Coin Reference</string>
+    <string name="use_coin_reference">Use 10 â‚¹ Coin Reference</string>
     <string name="gallery_image">Gallery Image</string>
     <string name="detection_results">Detection Results</string>
     <string name="total_detected_placeholder">Total Detected: 5</string>
     <string name="no_fish_detected">No Fish Detected</string>
-    <string name="no_detection_tips">Tips for better results:\n\n•  Ensure good lighting and brightness\n•  Place the fish clearly in frame\n•  Avoid extreme angles or tilt\n•  Move closer for smaller fish\n•  Reduce background clutter</string>
+    <string name="no_detection_tips">Tips for better results:\n\nâ€¢  Ensure good lighting and brightness\nâ€¢  Place the fish clearly in frame\nâ€¢  Avoid extreme angles or tilt\nâ€¢  Move closer for smaller fish\nâ€¢  Reduce background clutter</string>
     <string name="retake_photo">Retake Photo</string>
     <string name="save_this_capture">Save this capture?</string>
     <string name="discard">Discard</string>
@@ -188,8 +188,8 @@
     <string name="profile">Profile</string>
     <string name="you">You</string>
     <string name="fish_ai">Fish AI</string>
-    <string name="typing">Typing…</string>
-    <string name="loading">Loading…</string>
+    <string name="typing">Typingâ€¦</string>
+    <string name="loading">Loadingâ€¦</string>
     <string name="my_profile">My Profile</string>
     <string name="tap_to_change_photo">Tap icon to change photo</string>
     <string name="full_name">Full Name</string>
@@ -243,10 +243,10 @@
     <string name="fishing_sst">SST</string>
     <string name="fishing_chlorophyll">Chlorophyll</string>
     <string name="fishing_refresh">Refresh</string>
-    <string name="fishing_loading">Loading satellite data…</string>
-    <string name="fishing_loading_satellite">Fetching satellite ocean data…</string>
-    <string name="fishing_loading_zones">Computing fishing zones…</string>
-    <string name="fishing_loading_heatmap">Building heatmap overlay…</string>
+    <string name="fishing_loading">Loading satellite dataâ€¦</string>
+    <string name="fishing_loading_satellite">Fetching satellite ocean dataâ€¦</string>
+    <string name="fishing_loading_zones">Computing fishing zonesâ€¦</string>
+    <string name="fishing_loading_heatmap">Building heatmap overlayâ€¦</string>
     <string name="fishing_predicted_species">PREDICTED SPECIES</string>
     <string name="fishing_navigate_here">Navigate Here</string>
     <string name="fishing_error">Could not load fishing zones: %1$s</string>
@@ -265,7 +265,7 @@
     <string name="ocean_data_heat_wave">Heat Wave</string>
     <string name="ocean_data_tides">Tides</string>
     <string name="ocean_data_tsunami">Tsunami Warning</string>
-    <string name="ocean_data_loading">Loading ocean data…</string>
+    <string name="ocean_data_loading">Loading ocean dataâ€¦</string>
     <string name="ocean_data_layer_info">Ocean Data Layers</string>
     <string name="ocean_data_layer_error">Could not load layer: %1$s</string>
     <string name="ocean_data_subtitle">Real-time satellite ocean data from INCOIS</string>
@@ -299,15 +299,15 @@
     </string-array>
 
     <!-- Language Names -->
-    <string name="language_kannada">ಕನ್ನಡ (Kannada)</string>
-    <string name="language_gujarati">ગુજરાતી (Gujarati)</string>
-    <string name="language_marathi">मराठी (Marathi)</string>
-    <string name="language_punjabi">ਪੰਜਾਬੀ (Punjabi)</string>
-    <string name="language_odia">ଓଡ଼ିଆ (Odia)</string>
-    <string name="language_assamese">অসমীয়া (Assamese)</string>
-    <string name="language_urdu">اردو (Urdu)</string>
-    <string name="language_konkani">कोंकणी (Konkani)</string>
-    <string name="language_manipuri">মণিপুরী (Manipuri)</string>
+    <string name="language_kannada">à²•à²¨à³à²¨à²¡ (Kannada)</string>
+    <string name="language_gujarati">àª—à«àªœàª°àª¾àª¤à«€ (Gujarati)</string>
+    <string name="language_marathi">à¤®à¤°à¤¾à¤ à¥€ (Marathi)</string>
+    <string name="language_punjabi">à¨ªà©°à¨œà¨¾à¨¬à©€ (Punjabi)</string>
+    <string name="language_odia">à¬“à¬¡à¬¼à¬¿à¬† (Odia)</string>
+    <string name="language_assamese">à¦…à¦¸à¦®à§€à¦¯à¦¼à¦¾ (Assamese)</string>
+    <string name="language_urdu">Ø§Ø±Ø¯Ùˆ (Urdu)</string>
+    <string name="language_konkani">à¤•à¥‹à¤‚à¤•à¤£à¥€ (Konkani)</string>
+    <string name="language_manipuri">à¦®à¦£à¦¿à¦ªà§à¦°à§€ (Manipuri)</string>
 
     <!-- Protected Species -->
     <string name="protected_species_alert">Protected Species Detected!</string>

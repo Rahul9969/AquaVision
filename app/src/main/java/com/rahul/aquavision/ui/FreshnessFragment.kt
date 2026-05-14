@@ -62,7 +62,9 @@ class FreshnessFragment : Fragment() {
 
     private var lastBitmapEyes: Bitmap? = null
     private var lastEyesBoxes: List<BoundingBox> = emptyList()
-    private var eyesScore: Float? = null
+    // Store raw model confidence (0-1) and whether it predicted fresh
+    private var eyesRawConf: Float? = null
+    private var eyesIsFresh: Boolean? = null
 
     // Captured location store
     private var capturedLocation: Location? = null
@@ -199,6 +201,15 @@ class FreshnessFragment : Fragment() {
 
             binding.overlayEyes.clear()
             binding.overlayEyes.setImageDimensions(bitmap.width, bitmap.height)
+            // \u2500\u2500 Reset stale results before each new image analysis \u2500\u2500
+            eyesRawConf = null
+            eyesIsFresh = null
+            binding.txtResultEyes.text = getString(R.string.no_detection)
+            binding.txtResultEyes.background.setTint(Color.parseColor("#F5F5F5"))
+            binding.txtResultEyes.setTextColor(Color.parseColor("#757575"))
+            binding.cardFinalVerdict.visibility = View.GONE
+            binding.btnSaveResult.visibility = View.GONE
+
             binding.pbEyesLoading.visibility = View.VISIBLE
             cameraExecutor.execute { detectorEyes?.detect(bitmap) }
 
@@ -249,9 +260,8 @@ class FreshnessFragment : Fragment() {
                 txtResult.text = getString(R.string.detected_label, label, conf)
 
                 val isNonFresh = label.lowercase().contains("non") || label.lowercase().contains("spoil")
-                val score = if (isNonFresh) 0.5f - (bestBox.cnf / 2.0f) else 0.5f + (bestBox.cnf / 2.0f)
 
-                if (score > 0.5f) {
+                if (!isNonFresh) {
                     txtResult.setTextColor(Color.parseColor("#1B5E20"))
                     txtResult.background.setTint(Color.parseColor("#E8F5E9"))
                 } else {
@@ -259,37 +269,44 @@ class FreshnessFragment : Fragment() {
                     txtResult.background.setTint(Color.parseColor("#FFEBEE"))
                 }
 
-                eyesScore = score
+                // Store raw model confidence and freshness direction
+                eyesRawConf = bestBox.cnf
+                eyesIsFresh = !isNonFresh
                 calculateFinalVerdict()
             } else {
                 txtResult.text = getString(R.string.no_detection)
                 txtResult.background.setTint(Color.parseColor("#F5F5F5"))
                 txtResult.setTextColor(Color.parseColor("#757575"))
+
+                // ── Clear stale verdict from previous image ──
+                eyesRawConf = null
+                eyesIsFresh = null
+                binding.cardFinalVerdict.visibility = View.GONE
             }
         }
     }
 
     private fun calculateFinalVerdict() {
-        val eScore = eyesScore
+        val conf = eyesRawConf ?: return
+        val isFresh = eyesIsFresh ?: return
 
-        if (eScore != null) {
-            binding.cardFinalVerdict.visibility = View.VISIBLE
-            
-            // Calculate the confidence magnitude of this verdict (from 0 to 100%)
-            val verdictConfidence = (Math.abs(eScore - 0.5f) * 2.0f * 100).toInt()
+        binding.cardFinalVerdict.visibility = View.VISIBLE
+        binding.btnSaveResult.visibility = View.VISIBLE
 
-            if (eScore > 0.5) {
-                binding.txtFinalResult.text = getString(R.string.fresh_percentage, verdictConfidence)
-                binding.txtFinalResult.setTextColor(Color.parseColor("#2E7D32"))
-            } else {
-                binding.txtFinalResult.text = getString(R.string.not_fresh_percentage, verdictConfidence)
-                binding.txtFinalResult.setTextColor(Color.parseColor("#C62828"))
-            }
+        // Show the ACTUAL model prediction confidence percentage
+        val confPercent = (conf * 100).toInt()
+
+        if (isFresh) {
+            binding.txtFinalResult.text = getString(R.string.fresh_percentage, confPercent)
+            binding.txtFinalResult.setTextColor(Color.parseColor("#2E7D32"))
+        } else {
+            binding.txtFinalResult.text = getString(R.string.not_fresh_percentage, confPercent)
+            binding.txtFinalResult.setTextColor(Color.parseColor("#C62828"))
         }
     }
 
     private fun saveFreshnessLog() {
-        val appContext = requireContext().applicationContext // Use App Context
+        val appContext = requireContext().applicationContext
 
         val paths = mutableListOf<String>()
         val descriptions = mutableListOf<String>()
@@ -298,11 +315,15 @@ class FreshnessFragment : Fragment() {
         lastBitmapEyes?.let { bmp ->
             val drawnBmp = drawBoundingBoxes(appContext, bmp, lastEyesBoxes)
             bitmapsWithBoxes.add(drawnBmp)
-            val score = eyesScore
-            val status = if (score != null) { if (score > 0.5) "Fresh" else "Not Fresh" } else "Not Analyzed"
-            // ADDED: Include Confidence Percentage in details
-            val conf = if (score != null) (score * 100).toInt() else 0
-            descriptions.add("Part: EYES\nStatus: $status\nConfidence: $conf%")
+            val isFresh = eyesIsFresh
+            val conf = eyesRawConf
+            val status = when {
+                isFresh == null -> "Not Analyzed"
+                isFresh         -> "Fresh"
+                else            -> "Not Fresh"
+            }
+            val confPercent = if (conf != null) (conf * 100).toInt() else 0
+            descriptions.add("Part: EYES\nStatus: $status\nConfidence: $confPercent%")
         }
 
         if (bitmapsWithBoxes.isEmpty()) return
@@ -319,8 +340,8 @@ class FreshnessFragment : Fragment() {
             }
             val combinedPaths = paths.joinToString("|")
 
-            // ADDED: Append Freshness summary for History Graph parsing
-            val finalPercent = if(eyesScore != null) (eyesScore!! * 100).toInt() else 0
+            // Build freshness summary with ACTUAL model confidence for history
+            val finalPercent = if (eyesRawConf != null) (eyesRawConf!! * 100).toInt() else 0
             val combinedDetails = descriptions.joinToString(";;;") + ";;;Freshness: ${finalPercent}%"
 
             val title = binding.txtFinalResult.text.toString()
@@ -379,7 +400,7 @@ class FreshnessFragment : Fragment() {
             }
             val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
             val syncRequest = OneTimeWorkRequest.Builder(SyncWorker::class.java).setConstraints(constraints).build()
-            WorkManager.getInstance(context).enqueueUniqueWork("HistoryUploadWork", ExistingWorkPolicy.APPEND, syncRequest)
+            WorkManager.getInstance(context).enqueueUniqueWork("HistoryUploadWork", ExistingWorkPolicy.APPEND_OR_REPLACE, syncRequest)
         } catch (e: Exception) {
             e.printStackTrace()
         }

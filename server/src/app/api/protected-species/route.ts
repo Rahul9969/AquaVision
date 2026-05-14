@@ -1,8 +1,10 @@
 import { db } from '@/lib/firebase';
 import { NextResponse } from 'next/server';
+import { verifyAuth } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    verifyAuth(request);
     const snapshot = await db.collection('history')
       .where('is_protected', '==', true)
       .get();
