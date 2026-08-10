@@ -34,6 +34,11 @@ export default function LoginPage() {
     setLoading(false);
   };
 
+  const fillDemoCredentials = () => {
+    setEmail('admin@aquavision.com');
+    setPassword('aquavision2024');
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center login-bg theme-bg-page">
       <div className="absolute inset-0 overflow-hidden">
@@ -57,6 +62,27 @@ export default function LoginPage() {
             <h1 className="text-2xl font-bold theme-text-primary">AquaVision Monitor</h1>
             <p className="theme-text-muted mt-1 text-sm">Fisheries Intelligence Dashboard</p>
           </div>
+
+          {/* Demo Credentials Box */}
+          <div className="mb-6 p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-left">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 uppercase tracking-wider">Demo Access</span>
+              </div>
+              <button
+                type="button"
+                onClick={fillDemoCredentials}
+                className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 underline transition"
+              >
+                Auto-fill
+              </button>
+            </div>
+            <div className="text-xs space-y-1 font-mono theme-text-secondary">
+              <p><span className="theme-text-muted">Email:</span> admin@aquavision.com</p>
+              <p><span className="theme-text-muted">Password:</span> aquavision2024</p>
+            </div>
+          </div>
+
           {error && <div className="bg-red-500/20 border border-red-500/30 text-red-300 px-4 py-3 rounded-xl mb-4 text-sm">{error}</div>}
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
