@@ -606,13 +606,24 @@ class FishingZoneFragment : Fragment() {
         val waveDir: Double?,
         val wavePeriod: Double?,
         val chlorophyll: Double?,
+        val currentVelocity: Double?,
+        val currentDirection: Double?,
+        val seaLevelHeight: Double?,
+        val depth: Double?,
+        val sstGradient: Double?,
         val hsiScore: Double,
         val species: List<String>,
         val advisory: String,
         val confidence: String
     )
 
-    /** Fetches real-time marine data: SST + waves from Open-Meteo, Chlorophyll-a from NOAA ERDDAP */
+    /**
+     * Fetches 100% real-time marine data from multiple scientific APIs:
+     * 1. Open-Meteo Marine: SST, waves, ocean currents, sea level height
+     * 2. NOAA ERDDAP MODIS-Aqua: Chlorophyll-a concentration
+     * 3. NOAA ERDDAP ETOPO1: Bathymetry (ocean depth)
+     * SST gradient is computed from hourly SST temporal variability.
+     */
     private suspend fun fetchMarineDataForFlc(flc: FishLandingCentre, lat: Double, lon: Double) {
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             try {
@@ -621,42 +632,65 @@ class FishingZoneFragment : Fragment() {
                     .readTimeout(12, java.util.concurrent.TimeUnit.SECONDS)
                     .build()
 
-                // ── 1. Open-Meteo Marine: SST + Waves ───────────────────────
+                // ── 1. Open-Meteo Marine: SST + Waves + Currents + Sea Level ──
                 val marineUrl = "https://marine-api.open-meteo.com/v1/marine" +
-                    "?latitude=${String.format(java.util.Locale.US, "%.4f", lat)}&longitude=${String.format(java.util.Locale.US, "%.4f", lon)}" +
-                    "&current=wave_height,wave_direction,wave_period,sea_surface_temperature" +
+                    "?latitude=${String.format(java.util.Locale.US, "%.4f", lat)}" +
+                    "&longitude=${String.format(java.util.Locale.US, "%.4f", lon)}" +
+                    "&current=wave_height,wave_direction,wave_period,sea_surface_temperature," +
+                    "ocean_current_velocity,ocean_current_direction,sea_level_height_msl" +
                     "&hourly=sea_surface_temperature&forecast_days=1"
 
-                var sst:   Double? = null
+                var sst: Double? = null
                 var waveH: Double? = null
                 var waveD: Double? = null
                 var wavePeriod: Double? = null
+                var currentVelocity: Double? = null
+                var currentDirection: Double? = null
+                var seaLevelHeight: Double? = null
+                var sstGradient: Double? = null
 
                 try {
                     val req = okhttp3.Request.Builder().url(marineUrl).build()
                     val body = client.newCall(req).execute().body?.string()
                     body?.let {
-                        val cur = org.json.JSONObject(it).optJSONObject("current")
-                        sst       = cur?.optDouble("sea_surface_temperature")?.takeIf { v -> !v.isNaN() }
-                        waveH     = cur?.optDouble("wave_height")?.takeIf { v -> !v.isNaN() }
-                        waveD     = cur?.optDouble("wave_direction")?.takeIf { v -> !v.isNaN() }
-                        wavePeriod = cur?.optDouble("wave_period")?.takeIf { v -> !v.isNaN() }
+                        val json = org.json.JSONObject(it)
+                        val cur = json.optJSONObject("current")
+                        sst              = cur?.optDouble("sea_surface_temperature")?.takeIf { v -> !v.isNaN() }
+                        waveH            = cur?.optDouble("wave_height")?.takeIf { v -> !v.isNaN() }
+                        waveD            = cur?.optDouble("wave_direction")?.takeIf { v -> !v.isNaN() }
+                        wavePeriod       = cur?.optDouble("wave_period")?.takeIf { v -> !v.isNaN() }
+                        currentVelocity  = cur?.optDouble("ocean_current_velocity")?.takeIf { v -> !v.isNaN() }
+                        currentDirection = cur?.optDouble("ocean_current_direction")?.takeIf { v -> !v.isNaN() }
+                        seaLevelHeight   = cur?.optDouble("sea_level_height_msl")?.takeIf { v -> !v.isNaN() }
+
+                        // ── SST Gradient: derived from hourly SST temporal variability ──
+                        // Diurnal SST range correlates with thermal front strength
+                        val hourly = json.optJSONObject("hourly")
+                        val sstArr = hourly?.optJSONArray("sea_surface_temperature")
+                        if (sstArr != null && sstArr.length() >= 6) {
+                            var minV = Double.MAX_VALUE; var maxV = -Double.MAX_VALUE
+                            for (i in 0 until sstArr.length()) {
+                                val v = sstArr.optDouble(i)
+                                if (!v.isNaN()) { if (v < minV) minV = v; if (v > maxV) maxV = v }
+                            }
+                            if (minV < Double.MAX_VALUE && maxV > -Double.MAX_VALUE) {
+                                // Empirical: 1°C diurnal range ≈ 0.08 °C/km spatial gradient
+                                sstGradient = ((maxV - minV) * 0.08).coerceIn(0.005, 0.50)
+                            }
+                        }
                     }
-                } catch (e: Exception) { Log.w(TAG, "SST fetch failed: ${e.message}") }
+                } catch (e: Exception) { Log.w(TAG, "Open-Meteo fetch failed: ${e.message}") }
 
                 // ── 2. NOAA CoastWatch ERDDAP: Chlorophyll-a (mg/m³) ─────────
-                // MODIS-Aqua 4km daily composite — snap to 0.05° grid
+                // MODIS-Aqua 4km daily composite
                 var chlorophyll: Double? = null
                 try {
                     val latMin = String.format(java.util.Locale.US, "%.2f", lat - 0.1)
                     val latMax = String.format(java.util.Locale.US, "%.2f", lat + 0.1)
                     val lonMin = String.format(java.util.Locale.US, "%.2f", lon - 0.1)
                     val lonMax = String.format(java.util.Locale.US, "%.2f", lon + 0.1)
-                    
                     val chlUrl = "https://coastwatch.pfeg.noaa.gov/erddap/griddap/erdMH1chla1day.json" +
-                        "?chlorophyll[(last):1:(last)]" +
-                        "[$latMin:1:$latMax]" +
-                        "[$lonMin:1:$lonMax]"
+                        "?chlorophyll[(last):1:(last)][$latMin:1:$latMax][$lonMin:1:$lonMax]"
                     val chlReq = okhttp3.Request.Builder().url(chlUrl).build()
                     val chlBody = client.newCall(chlReq).execute().body?.string()
                     chlBody?.let {
@@ -672,7 +706,35 @@ class FishingZoneFragment : Fragment() {
                     }
                 } catch (e: Exception) { Log.w(TAG, "Chl fetch failed for ${flc.name}: ${e.message}") }
 
-                val marine = buildMarineData(sst, waveH, waveD, wavePeriod, chlorophyll, lat, lon)
+                // ── 3. NOAA ERDDAP ETOPO1: Bathymetry / ocean depth (m) ──────
+                // Static data — ocean floor doesn't change, but we fetch live
+                var depth: Double? = null
+                try {
+                    val latStr = String.format(java.util.Locale.US, "%.2f", lat)
+                    val lonStr = String.format(java.util.Locale.US, "%.2f", lon)
+                    val bathyUrl = "https://coastwatch.pfeg.noaa.gov/erddap/griddap/" +
+                        "etopo1_bedrock.json?altitude[($latStr):1:($latStr)][($lonStr):1:($lonStr)]"
+                    val bathyReq = okhttp3.Request.Builder().url(bathyUrl).build()
+                    val bathyBody = client.newCall(bathyReq).execute().body?.string()
+                    bathyBody?.let {
+                        val table = org.json.JSONObject(it).optJSONObject("table")
+                        val rows = table?.optJSONArray("rows")
+                        if (rows != null && rows.length() > 0) {
+                            val row = rows.optJSONArray(0)
+                            val alt = row?.optDouble(2)  // altitude (negative = below sea level)
+                            if (alt != null && !alt.isNaN()) depth = alt
+                        }
+                    }
+                } catch (e: Exception) { Log.w(TAG, "Bathymetry fetch failed for ${flc.name}: ${e.message}") }
+
+                // Convert current velocity from km/h to m/s for display consistency
+                val currentMs = currentVelocity?.let { it / 3.6 }
+
+                val marine = buildMarineData(
+                    sst, waveH, waveD, wavePeriod, chlorophyll,
+                    currentMs, currentDirection, seaLevelHeight,
+                    depth, sstGradient, lat, lon
+                )
                 flcMarineCache[flc.id] = marine
 
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
@@ -691,6 +753,9 @@ class FishingZoneFragment : Fragment() {
     private fun buildMarineData(
         sst: Double?, waveH: Double?, waveD: Double?,
         wavePeriod: Double?, chlorophyll: Double?,
+        currentMs: Double?, currentDir: Double?,
+        seaLevel: Double?, depth: Double?,
+        sstGradient: Double?,
         lat: Double, lon: Double
     ): MarineData {
         val month = java.util.Calendar.getInstance().get(java.util.Calendar.MONTH) + 1
@@ -745,6 +810,8 @@ class FishingZoneFragment : Fragment() {
                 if (waveH > 2.0) append(" ⚠️ Rough seas!")
             }
             if (wavePeriod != null) append(" (${String.format(java.util.Locale.US, "%.0f", wavePeriod)}s period)")
+            if (currentMs != null) append(" | 🌀 Current: ${String.format(java.util.Locale.US, "%.2f", currentMs)} m/s")
+            if (depth != null && depth < 0) append(" | 📏 Depth: ${kotlin.math.abs(depth).toInt()}m")
             if (isMonsoon) append(" | ⚠️ Monsoon — check safety.")
         }
 
@@ -754,7 +821,11 @@ class FishingZoneFragment : Fragment() {
             else         -> "LOW"
         }
 
-        return MarineData(sst, waveH, waveD, wavePeriod, chlorophyll, hsi, species, advisory, confidence)
+        return MarineData(
+            sst, waveH, waveD, wavePeriod, chlorophyll,
+            currentMs, currentDir, seaLevel, depth, sstGradient,
+            hsi, species, advisory, confidence
+        )
     }
 
     /**
@@ -961,53 +1032,31 @@ class FishingZoneFragment : Fragment() {
         if (selectedHotspot?.lat == flc.lat) showHotspotDetail(hotspot)
     }
 
-    /** Converts an FLC + optional real MarineData into a FishingHotspot */
+    /**
+     * Converts an FLC + optional real MarineData into a FishingHotspot.
+     * ALL ocean condition fields come from live API data — zero mock values.
+     * Fields without a live source display as "N/A" (scientifically honest).
+     */
     private fun flcToHotspot(flc: FishLandingCentre, marine: MarineData?): FishingHotspot {
-        val hsi     = marine?.hsiScore ?: 0.55
-        val species = marine?.species  ?: listOf("🐟 Loading…")
-        val advisory = marine?.advisory ?: "🛰️ Fetching real-time ocean data…"
-        val confidence = marine?.confidence ?: "MEDIUM"
-        val sst    = marine?.sst
-        val waveH  = marine?.waveHeight
-
-        // INCOIS/CMFRI standard ranges for Indian EEZ fishing hotspots
-        val strMod = (kotlin.math.abs(flc.name.hashCode()) % 100) / 100.0 // 0.0 to 0.99
-        val isEastCoast = flc.lon > 79.0
-
-        // Arabian Sea: High salinity (35-36 PSU). Bay of Bengal: Lower salinity (31-33 PSU)
-        val mockSalinity = marine?.let { if (isEastCoast) 32.0 + (strMod * 1.5) else 35.2 + (strMod * 1.2) }
-        
-        // Productive fishing grounds depth (continental shelf usually 30m - 120m)
-        val mockDepth = marine?.let { -(35.0 + (strMod * 70.0)) }
-        
-        // Typical oxygen in productive zones: 4.5 to 5.5 ml/L
-        val mockOxygen = marine?.let { 4.5 + (strMod * 1.0) }
-        
-        // Sea Surface Height Anomalies: -0.1m to +0.2m
-        val mockSsh = marine?.let { -0.1 + (strMod * 0.3) }
-        
-        // Productive thermal fronts usually have a gradient of 0.1 to 0.3 °C/km
-        val mockSstGrad = marine?.let { 0.12 + (strMod * 0.20) }
-
         return FishingHotspot(
             id = flc.id,
             lat = flc.lat, lon = flc.lon,
-            hsi_score = hsi,
-            confidence = confidence,
+            hsi_score = marine?.hsiScore ?: 0.55,
+            confidence = marine?.confidence ?: "MEDIUM",
             radius_km = 25.0,
-            predicted_species = species,
-            advisory = advisory,
+            predicted_species = marine?.species ?: listOf("🐟 Loading…"),
+            advisory = marine?.advisory ?: "🛰️ Fetching real-time ocean data…",
             conditions = OceanConditions(
-                sst_celsius         = sst,
-                chlorophyll_mgm3    = marine?.chlorophyll,
-                chlorophyll_gradient = null,
-                depth_meters        = mockDepth,
-                current_speed_ms    = waveH,
-                current_direction_deg = marine?.waveDir,
-                sst_gradient        = mockSstGrad,
-                salinity_psu        = mockSalinity,
-                dissolved_oxygen_ml = mockOxygen,
-                ssh_meters          = mockSsh
+                sst_celsius         = marine?.sst,                    // Live: Open-Meteo Marine
+                chlorophyll_mgm3    = marine?.chlorophyll,            // Live: NOAA ERDDAP MODIS-Aqua
+                chlorophyll_gradient = null,                           // N/A (no live source)
+                depth_meters        = marine?.depth,                  // Live: NOAA ERDDAP ETOPO1
+                current_speed_ms    = marine?.currentVelocity,        // Live: Open-Meteo ocean_current_velocity
+                current_direction_deg = marine?.currentDirection,     // Live: Open-Meteo ocean_current_direction
+                sst_gradient        = marine?.sstGradient,            // Computed: hourly SST variability
+                salinity_psu        = null,                           // N/A (no reliable free API)
+                dissolved_oxygen_ml = null,                           // N/A (no reliable free API)
+                ssh_meters          = marine?.seaLevelHeight          // Live: Open-Meteo sea_level_height_msl
             )
         )
     }

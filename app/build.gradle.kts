@@ -97,6 +97,9 @@ dependencies {
     // 1. MediaPipe for AI Models
     implementation("com.google.mediapipe:tasks-genai:0.10.24")
 
+    // ONNX Runtime for Freshness Classification
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.17.1")
+
     // 2. OkHttp for Downloading Models
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
@@ -113,6 +116,7 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.firebase:firebase-storage-ktx")
     implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-auth-ktx")   // Required for anonymous auth before Firestore writes
 
     // WorkManager (for background sync)
     implementation("androidx.work:work-runtime-ktx:2.9.0")

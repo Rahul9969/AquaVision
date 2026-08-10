@@ -66,10 +66,14 @@ enum class WaterStatus(
  */
 class MaritimeBoundaryChecker(context: Context) {
 
-    // Store ALL polygon rings (not just the largest) for accurate multi-island checks
-    private val landPolygons: List<List<Pair<Double, Double>>>
-    private val territorialPolygons: List<List<Pair<Double, Double>>>
-    private val eezPolygons: List<List<Pair<Double, Double>>>
+    data class PolygonData(
+        val outer: List<Pair<Double, Double>>,
+        val holes: List<List<Pair<Double, Double>>>
+    )
+
+    private val landPolygons: List<PolygonData>
+    private val territorialPolygons: List<PolygonData>
+    private val eezPolygons: List<PolygonData>
 
     companion object {
         private const val TAG = "MaritimeBoundary"
@@ -109,8 +113,8 @@ class MaritimeBoundaryChecker(context: Context) {
      * Handles Polygon, MultiPolygon geometry types.
      * Returns a list of polygon rings (each ring is a list of lon/lat pairs).
      */
-    private fun parseAllGeoJsonPolygons(geoJsonString: String): List<List<Pair<Double, Double>>> {
-        val allRings = mutableListOf<List<Pair<Double, Double>>>()
+    private fun parseAllGeoJsonPolygons(geoJsonString: String): List<PolygonData> {
+        val polygons = mutableListOf<PolygonData>()
 
         val parsed = JSONObject(geoJsonString)
         val features = parsed.getJSONArray("features")
@@ -127,36 +131,38 @@ class MaritimeBoundaryChecker(context: Context) {
 
             when (type) {
                 "Polygon" -> {
-                    // A Polygon has an array of rings; first ring is outer boundary
-                    val ring = coordinates.getJSONArray(0)
-                    val points = mutableListOf<Pair<Double, Double>>()
-                    for (i in 0 until ring.length()) {
-                        val coord = ring.getJSONArray(i)
-                        val lon = coord.getDouble(0)
-                        val lat = coord.getDouble(1)
-                        points.add(Pair(lon, lat))
-                    }
-                    if (points.isNotEmpty()) allRings.add(points)
+                    polygons.add(parsePolygonNode(coordinates))
                 }
                 "MultiPolygon" -> {
-                    // MultiPolygon: array of polygons, each with array of rings
                     for (p in 0 until coordinates.length()) {
-                        val polygon = coordinates.getJSONArray(p)
-                        val ring = polygon.getJSONArray(0) // outer ring
-                        val points = mutableListOf<Pair<Double, Double>>()
-                        for (i in 0 until ring.length()) {
-                            val coord = ring.getJSONArray(i)
-                            val lon = coord.getDouble(0)
-                            val lat = coord.getDouble(1)
-                            points.add(Pair(lon, lat))
-                        }
-                        if (points.isNotEmpty()) allRings.add(points)
+                        polygons.add(parsePolygonNode(coordinates.getJSONArray(p)))
                     }
                 }
             }
         }
 
-        return allRings
+        return polygons
+    }
+
+    private fun parsePolygonNode(polygonArray: org.json.JSONArray): PolygonData {
+        val outerRing = mutableListOf<Pair<Double, Double>>()
+        val outerCoords = polygonArray.getJSONArray(0)
+        for (i in 0 until outerCoords.length()) {
+            val c = outerCoords.getJSONArray(i)
+            outerRing.add(Pair(c.getDouble(0), c.getDouble(1)))
+        }
+
+        val holes = mutableListOf<List<Pair<Double, Double>>>()
+        for (h in 1 until polygonArray.length()) {
+            val holeRing = mutableListOf<Pair<Double, Double>>()
+            val holeCoords = polygonArray.getJSONArray(h)
+            for (i in 0 until holeCoords.length()) {
+                val c = holeCoords.getJSONArray(i)
+                holeRing.add(Pair(c.getDouble(0), c.getDouble(1)))
+            }
+            if (holeRing.isNotEmpty()) holes.add(holeRing)
+        }
+        return PolygonData(outerRing, holes)
     }
 
     /**
@@ -165,11 +171,19 @@ class MaritimeBoundaryChecker(context: Context) {
     private fun isPointInAnyPolygon(
         longitude: Double,
         latitude: Double,
-        polygons: List<List<Pair<Double, Double>>>
+        polygons: List<PolygonData>
     ): Boolean {
-        for (polygon in polygons) {
-            if (isPointInPolygon(longitude, latitude, polygon)) {
-                return true
+        for (poly in polygons) {
+            if (isPointInPolygonRing(longitude, latitude, poly.outer)) {
+                // If it is in the outer boundary, verify it's NOT inside any hole (e.g. lake/lagoon)
+                var inHole = false
+                for (hole in poly.holes) {
+                    if (isPointInPolygonRing(longitude, latitude, hole)) {
+                        inHole = true
+                        break
+                    }
+                }
+                if (!inHole) return true
             }
         }
         return false
@@ -219,7 +233,7 @@ class MaritimeBoundaryChecker(context: Context) {
      * This is the core algorithm that determines if a GPS coordinate
      * falls inside a polygon boundary. Works offline with no network needed.
      */
-    private fun isPointInPolygon(
+    private fun isPointInPolygonRing(
         longitude: Double,
         latitude: Double,
         polygon: List<Pair<Double, Double>>
@@ -261,43 +275,58 @@ class MaritimeBoundaryChecker(context: Context) {
     private fun getDistanceToBoundary(
         latitude: Double,
         longitude: Double,
-        polygons: List<List<Pair<Double, Double>>>
+        polygons: List<PolygonData>
     ): Double {
         var minDistance = Double.MAX_VALUE
 
-        for (polygon in polygons) {
-            for ((boundaryLon, boundaryLat) in polygon) {
-                val distance = haversineDistance(
-                    latitude, longitude,
-                    boundaryLat, boundaryLon
-                )
-                if (distance < minDistance) {
-                    minDistance = distance
-                }
+        for (poly in polygons) {
+            minDistance = min(minDistance, getDistanceToRing(latitude, longitude, poly.outer))
+            for (hole in poly.holes) {
+                minDistance = min(minDistance, getDistanceToRing(latitude, longitude, hole))
             }
         }
 
         return minDistance
     }
 
+    private fun getDistanceToRing(lat: Double, lon: Double, ring: List<Pair<Double, Double>>): Double {
+        if (ring.isEmpty()) return Double.MAX_VALUE
+        var minDist = Double.MAX_VALUE
+        var j = ring.size - 1
+        for (i in ring.indices) {
+            val p1 = ring[j]
+            val p2 = ring[i]
+            val dist = distanceToSegment(lat, lon, p1.second, p1.first, p2.second, p2.first)
+            if (dist < minDist) minDist = dist
+            j = i
+        }
+        return minDist
+    }
+
     /**
-     * Haversine formula for accurate distance calculation between two GPS points.
-     * Returns distance in kilometers.
+     * Calculates the shortest distance from point P to line segment A-B.
+     * Uses equirectangular projection for speed and accuracy over small distances.
      */
-    private fun haversineDistance(
-        lat1: Double, lon1: Double,
-        lat2: Double, lon2: Double
-    ): Double {
-        val R = 6371.0 // Earth radius in km
-        val dLat = Math.toRadians(lat2 - lat1)
-        val dLon = Math.toRadians(lon2 - lon1)
-
-        val a = sin(dLat / 2) * sin(dLat / 2) +
-                cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
-                sin(dLon / 2) * sin(dLon / 2)
-
-        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
-
-        return R * c
+    private fun distanceToSegment(pLat: Double, pLon: Double, aLat: Double, aLon: Double, bLat: Double, bLon: Double): Double {
+        val r = 6371.0 // Earth radius in km
+        val cosPlat = cos(Math.toRadians(pLat))
+        
+        // Project A and B relative to P(0,0) into km
+        val ax = Math.toRadians(aLon - pLon) * cosPlat * r
+        val ay = Math.toRadians(aLat - pLat) * r
+        val bx = Math.toRadians(bLon - pLon) * cosPlat * r
+        val by = Math.toRadians(bLat - pLat) * r
+        
+        val l2 = (bx - ax) * (bx - ax) + (by - ay) * (by - ay)
+        if (l2 == 0.0) return sqrt(ax*ax + ay*ay) // A == B
+        
+        // Calculate projection scalar t
+        var t = (-(ax * (bx - ax) + ay * (by - ay))) / l2
+        t = max(0.0, min(1.0, t)) // Clamp to segment
+        
+        val projX = ax + t * (bx - ax)
+        val projY = ay + t * (by - ay)
+        
+        return sqrt(projX*projX + projY*projY)
     }
 }

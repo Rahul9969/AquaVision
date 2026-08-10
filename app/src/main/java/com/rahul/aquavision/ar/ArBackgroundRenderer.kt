@@ -101,6 +101,18 @@ class ArBackgroundRenderer {
         GLES20.glEnable(GLES20.GL_DEPTH_TEST)
     }
 
+    /** Release GL resources. Safe to call from any thread. */
+    fun destroy() {
+        if (textureId != -1) {
+            GLES20.glDeleteTextures(1, intArrayOf(textureId), 0)
+            textureId = -1
+        }
+        if (quadProgram != 0) {
+            GLES20.glDeleteProgram(quadProgram)
+            quadProgram = 0
+        }
+    }
+
     private fun createProgram(vertexSource: String, fragmentSource: String): Int {
         val vs = loadShader(GLES20.GL_VERTEX_SHADER, vertexSource)
         val fs = loadShader(GLES20.GL_FRAGMENT_SHADER, fragmentSource)

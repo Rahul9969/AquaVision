@@ -7,6 +7,7 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.cloudinary.Cloudinary
 import com.cloudinary.utils.ObjectUtils
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.rahul.aquavision.utils.UserUtils
 import kotlinx.coroutines.Dispatchers
@@ -24,6 +25,19 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
 
     override suspend fun doWork(): Result {
         return try {
+            // Ensure Firebase Auth session exists before any Firestore write.
+            // The app uses a UUID-based userId (not tied to Firebase Auth UID),
+            // but Firestore security rules still require request.auth != null.
+            // Anonymous auth is idempotent — if already signed in, this resolves instantly.
+            val auth = FirebaseAuth.getInstance()
+            if (auth.currentUser == null) {
+                try {
+                    auth.signInAnonymously().await()
+                } catch (authEx: Exception) {
+                    Log.w("SyncWorker", "Anonymous sign-in failed, Firestore writes may be rejected: ${authEx.message}")
+                }
+            }
+
             val cloudinary = Cloudinary(ObjectUtils.asMap(
                 "cloud_name", CLOUD_NAME,
                 "secure", true
@@ -54,12 +68,10 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
                 } catch (itemError: Exception) {
                     Log.e("SyncWorker", "Failed to sync item ${item.id}: ${itemError.message}", itemError)
                     failedCount++
-                    // Continue with other items instead of aborting
                 }
             }
 
             if (failedCount > 0 && failedCount == unsyncedList.size) {
-                // All items failed — retry if under max attempts, else fail
                 if (runAttemptCount < 5) {
                     Log.w("SyncWorker", "All $failedCount items failed, scheduling retry (attempt $runAttemptCount)")
                     return Result.retry()
@@ -72,7 +84,6 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
 
         } catch (e: Exception) {
             Log.e("SyncWorker", "Sync failed: ${e.message}", e)
-            // Retry on transient errors instead of failing (which poisons the APPEND chain)
             if (runAttemptCount < 5) {
                 return Result.retry()
             }
@@ -106,6 +117,10 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
             }
         }
 
+        // Firebase Auth UID (anonymous) — used in Firestore security rules.
+        // Falls back to the local UUID userId if auth is somehow unavailable.
+        val authUid = FirebaseAuth.getInstance().currentUser?.uid ?: userId
+
         // Add to Firestore with User Details
         val logData = hashMapOf(
             "timestamp" to item.timestamp,
@@ -119,15 +134,20 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
                 "name" to item.placeName
             ),
             "image_urls" to imageUrls,
-            // --- ATTACHED USER INFO ---
             "user" to hashMapOf(
                 "id" to userId,
+                "auth_uid" to authUid,   // Firebase Auth UID for security rule matching
                 "name" to userName,
                 "pfp_url" to userPfp
             )
         )
+        
+        item.metricsJson?.let {
+            logData["metrics_json"] = it
+        }
 
-        firestore.collection("history").document("${userId}_${item.id}").set(logData).await()
+        // Document keyed by authUid so Firestore rules can check request.auth.uid == authUid
+        firestore.collection("history").document("${authUid}_${item.id}").set(logData).await()
     }
 
     private suspend fun uploadImage(cloudinary: Cloudinary, file: File): String = withContext(Dispatchers.IO) {

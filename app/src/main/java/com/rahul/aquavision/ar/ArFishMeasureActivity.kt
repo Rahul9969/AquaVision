@@ -2,60 +2,119 @@ package com.rahul.aquavision.ar
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.PixelFormat
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
+import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.HandlerThread
 import android.util.Log
 import android.view.MotionEvent
+import android.view.PixelCopy
 import android.view.View
+import android.widget.Button
 import android.widget.ImageButton
-import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.cardview.widget.CardView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.google.ar.core.*
-import com.google.ar.core.exceptions.*
-import com.rahul.aquavision.R
-import javax.microedition.khronos.egl.EGLConfig
-import javax.microedition.khronos.opengles.GL10
-import kotlin.math.sqrt
-import android.view.PixelCopy
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import java.io.File
-import java.io.FileOutputStream
-import com.rahul.aquavision.data.DatabaseHelper
-import com.rahul.aquavision.data.SyncWorker
+import androidx.lifecycle.lifecycleScope
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkManager
+import com.google.ar.core.*
+import com.google.ar.core.exceptions.*
+import com.rahul.aquavision.R
+import com.rahul.aquavision.data.DatabaseHelper
+import com.rahul.aquavision.data.SyncWorker
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 import java.util.concurrent.TimeUnit
-import android.widget.Button
+import javax.microedition.khronos.egl.EGLConfig
+import javax.microedition.khronos.opengles.GL10
 
+/**
+ * AR Fish Measurement Activity — rebuilt from scratch using the official
+ * ARCore Raw Depth API patterns.
+ *
+ * Measurement Modes:
+ *   1. Depth Mode (Raw Depth preferred): Single tap starts multi-frame depth scan.
+ *      The [DepthProcessor] accumulates 4 frames of confidence-filtered point cloud
+ *      data, then computes full 3D measurements (L/W/H/Volume/Weight).
+ *   2. HitTest Mode (fallback): Two-tap point-to-point measurement using tracked
+ *      anchors for length-only measurement.
+ *
+ * State Machine:
+ *   IDLE → SCANNING (depth) → RESULT_READY → SAVED
+ *   IDLE → POINT1_PLACED → POINT2_PLACED (hit-test) → RESULT_READY → SAVED
+ *
+ * References:
+ *   https://github.com/google-ar/arcore-android-sdk/tree/main/samples/raw_depth_java
+ */
 class ArFishMeasureActivity : ComponentActivity() {
 
     companion object {
         private const val TAG = "ArFishMeasure"
         private const val CAMERA_PERMISSION_CODE = 3001
 
-        // Scientific constants
-        private const val FISH_DENSITY_G_CM3 = 1.05f
-        private const val LENGTH_TO_WIDTH_RATIO = 3.5f
-        private const val WIDTH_TO_THICKNESS_RATIO = 1.4f
+        /** Number of depth frames to accumulate before computing measurement. */
+        private const val TARGET_FRAME_COUNT = 4
+
+        /** Delay between depth frame acquisition attempts (ms). */
+        private const val FRAME_ACQUIRE_DELAY_MS = 350L
     }
+
+    // ── State Machine ────────────────────────────────────────────────────
+
+    private enum class MeasureState {
+        IDLE,
+        SCANNING,        // Depth mode: accumulating frames
+        POINT1_PLACED,   // HitTest mode: first anchor placed
+        POINT2_PLACED,   // HitTest mode: second anchor placed
+        RESULT_READY,    // Measurement complete, showing results
+        SAVED            // Results saved to database
+    }
+
+    @Volatile
+    private var state = MeasureState.IDLE
+
+    // ── AR Core ──────────────────────────────────────────────────────────
 
     private var session: Session? = null
     private lateinit var glSurfaceView: GLSurfaceView
     private val backgroundRenderer = ArBackgroundRenderer()
+    private val depthProcessor = DepthProcessor()
 
-    // UI elements
+    /** Thread-safe lock for accessing the current frame. */
+    private val frameLock = Object()
+
+    @Volatile
+    private var currentFrame: Frame? = null
+
+    private var installRequested = false
+    private var lastTrackingState: TrackingState? = null
+
+    // ── Hit-test Anchors ─────────────────────────────────────────────────
+
+    private var anchor1: Anchor? = null
+    private var anchor2: Anchor? = null
+
+    // ── UI Elements ──────────────────────────────────────────────────────
+
     private lateinit var instructionText: TextView
     private lateinit var resultCard: CardView
     private lateinit var tvLength: TextView
@@ -64,27 +123,40 @@ class ArFishMeasureActivity : ComponentActivity() {
     private lateinit var tvVolume: TextView
     private lateinit var tvWeight: TextView
     private lateinit var tvMethod: TextView
+    private lateinit var tvTrackingStatus: TextView
+    private lateinit var tvFrameStatus: TextView
+    private lateinit var tvDepthQuality: TextView
+    private lateinit var scanProgressBar: ProgressBar
     private lateinit var btnReset: ImageButton
     private lateinit var btnBack: ImageButton
     private lateinit var btnSave: Button
     private lateinit var measureOverlay: ArMeasureOverlay
 
-    // Final mathematical results for saving
-    private var finalLengthCm: Float = 0f
-    private var finalVolumeCm3: Float = 0f
-    private var finalWeightGrams: Float = 0f
+    // ── Final Results ────────────────────────────────────────────────────
 
-    // Measurement state
-    private var anchor1: Anchor? = null
-    private var anchor2: Anchor? = null
-    private var currentFrame: Frame? = null
-    private var depthSupported = false
+    private var finalResult: MeasurementResult? = null
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Lifecycle
+    // ══════════════════════════════════════════════════════════════════════
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_ar_measure)
 
-        // Bind views
+        bindViews()
+        setupListeners()
+
+        if (!hasCameraPermission()) {
+            ActivityCompat.requestPermissions(
+                this, arrayOf(Manifest.permission.CAMERA), CAMERA_PERMISSION_CODE
+            )
+        }
+
+        setupGlSurface()
+    }
+
+    private fun bindViews() {
         glSurfaceView = findViewById(R.id.gl_surface_view)
         instructionText = findViewById(R.id.tv_instruction)
         resultCard = findViewById(R.id.result_card)
@@ -94,22 +166,33 @@ class ArFishMeasureActivity : ComponentActivity() {
         tvVolume = findViewById(R.id.tv_volume)
         tvWeight = findViewById(R.id.tv_weight)
         tvMethod = findViewById(R.id.tv_method)
+        tvTrackingStatus = findViewById(R.id.tv_tracking_status)
+        tvFrameStatus = findViewById(R.id.tv_frame_status)
+        tvDepthQuality = findViewById(R.id.tv_depth_quality)
+        scanProgressBar = findViewById(R.id.scan_progress_bar)
         btnReset = findViewById(R.id.btn_reset)
         btnBack = findViewById(R.id.btn_back)
         btnSave = findViewById(R.id.btn_save)
         measureOverlay = findViewById(R.id.measure_overlay)
+    }
 
+    private fun setupListeners() {
         btnReset.setOnClickListener { resetMeasurement() }
         btnBack.setOnClickListener { finish() }
         btnSave.setOnClickListener { saveMeasurementToDb() }
 
-        if (!hasCameraPermission()) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), CAMERA_PERMISSION_CODE)
+        // Touch handler on the overlay (sits on top of GL surface)
+        measureOverlay.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_DOWN) {
+                handleTap(event.x, event.y)
+            }
+            true
         }
-
-        setupGlSurface()
-        setupTouchListener()
     }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // GL Surface
+    // ══════════════════════════════════════════════════════════════════════
 
     private fun setupGlSurface() {
         glSurfaceView.preserveEGLContextOnPause = true
@@ -121,62 +204,18 @@ class ArFishMeasureActivity : ComponentActivity() {
             override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
                 GLES20.glClearColor(0.1f, 0.1f, 0.1f, 1.0f)
                 backgroundRenderer.createOnGlThread()
-
-                // Create ARCore session on GL thread
-                try {
-                    session = Session(this@ArFishMeasureActivity).apply {
-                        val arConfig = Config(this).apply {
-                            focusMode = Config.FocusMode.AUTO
-                            updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
-                            planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
-
-                            depthSupported = isDepthModeSupported(Config.DepthMode.AUTOMATIC)
-                            depthMode = if (depthSupported) {
-                                Log.d(TAG, "Depth API ENABLED")
-                                Config.DepthMode.AUTOMATIC
-                            } else {
-                                Log.d(TAG, "Depth API NOT supported, using hit-test only")
-                                Config.DepthMode.DISABLED
-                            }
-                        }
-                        configure(arConfig)
-                        resume()
-                    }
-
-                    runOnUiThread {
-                        val methodLabel = if (depthSupported) "Depth + HitTest" else "HitTest Only"
-                        tvMethod.text = "Method: $methodLabel"
-                    }
-
-                    Log.d(TAG, "AR session created successfully")
-                } catch (e: UnavailableArcoreNotInstalledException) {
-                    runOnUiThread {
-                        Toast.makeText(this@ArFishMeasureActivity,
-                            "ARCore is not installed. Please install it from Play Store.",
-                            Toast.LENGTH_LONG).show()
-                        finish()
-                    }
-                } catch (e: UnavailableDeviceNotCompatibleException) {
-                    runOnUiThread {
-                        Toast.makeText(this@ArFishMeasureActivity,
-                            "This device does not support ARCore.",
-                            Toast.LENGTH_LONG).show()
-                        finish()
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to create AR session", e)
-                    runOnUiThread {
-                        Toast.makeText(this@ArFishMeasureActivity,
-                            "AR initialization failed: ${e.message}",
-                            Toast.LENGTH_LONG).show()
-                        finish()
-                    }
-                }
+                Log.d(TAG, "GL surface created")
             }
 
             override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
                 GLES20.glViewport(0, 0, width, height)
-                session?.setDisplayGeometry(0, width, height)
+                val rotation = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    display?.rotation ?: 0
+                } else {
+                    @Suppress("DEPRECATION")
+                    windowManager.defaultDisplay.rotation
+                }
+                session?.setDisplayGeometry(rotation, width, height)
             }
 
             override fun onDrawFrame(gl: GL10?) {
@@ -187,182 +226,307 @@ class ArFishMeasureActivity : ComponentActivity() {
                     s.setCameraTextureName(backgroundRenderer.textureId)
                     val frame = s.update()
                     backgroundRenderer.draw(frame)
-                    currentFrame = frame
+
+                    synchronized(frameLock) {
+                        currentFrame = frame
+                    }
 
                     val camera = frame.camera
+
+                    // Update tracking status only on state change
+                    if (camera.trackingState != lastTrackingState) {
+                        lastTrackingState = camera.trackingState
+                        runOnUiThread { updateTrackingStatus(camera.trackingState) }
+                    }
+
+                    // Update anchor overlay positions when tracking
                     if (camera.trackingState == TrackingState.TRACKING) {
                         updateOverlayPositions(camera)
                     }
-                } catch (_: Exception) {}
+                } catch (e: Exception) {
+                    Log.e(TAG, "AR frame processing error", e)
+                }
             }
         })
 
         glSurfaceView.renderMode = GLSurfaceView.RENDERMODE_CONTINUOUSLY
     }
 
-    private fun setupTouchListener() {
-        // Touch goes on the overlay (which is on top of the GL surface)
-        measureOverlay.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_DOWN) {
-                handleTap(event.x, event.y)
-            }
-            true
-        }
-    }
+    // ══════════════════════════════════════════════════════════════════════
+    // Touch / Tap Handling
+    // ══════════════════════════════════════════════════════════════════════
 
     private fun handleTap(screenX: Float, screenY: Float) {
-        val frame = currentFrame ?: return
-        val s = session ?: return
+        val frame = synchronized(frameLock) { currentFrame } ?: return
 
-        if (anchor1 != null && anchor2 != null) return // Already measured
-
-        // First try: depth-based 3D point
-        var worldPoint = if (depthSupported) {
-            getPointFromDepth(frame, screenX, screenY)
-        } else null
-
-        // Fallback: hit-test against detected planes
-        if (worldPoint == null) {
-            worldPoint = getPointFromHitTest(frame, screenX, screenY)
-        }
-
-        if (worldPoint == null) {
-            runOnUiThread {
-                Toast.makeText(this, "Could not get 3D point. Move phone slowly to build depth map.", Toast.LENGTH_SHORT).show()
-            }
+        if (frame.camera.trackingState != TrackingState.TRACKING) {
+            Toast.makeText(this, "Move the phone slowly to establish tracking", Toast.LENGTH_SHORT).show()
             return
         }
 
-        // Create ARCore anchor at this 3D point
-        val pose = Pose.makeTranslation(worldPoint[0], worldPoint[1], worldPoint[2])
-        val anchor = try {
-            s.createAnchor(pose)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to create anchor", e)
+        when (state) {
+            MeasureState.IDLE -> {
+                if (depthProcessor.isDepthSupported) {
+                    startDepthScan(frame, screenX, screenY)
+                } else {
+                    placeFirstAnchor(frame, screenX, screenY)
+                }
+            }
+            MeasureState.POINT1_PLACED -> {
+                placeSecondAnchor(frame, screenX, screenY)
+            }
+            MeasureState.RESULT_READY, MeasureState.SAVED -> {
+                // Ignore taps when showing results — user must reset first
+            }
+            MeasureState.SCANNING, MeasureState.POINT2_PLACED -> {
+                // Already in progress
+            }
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Depth Scan Mode
+    // ══════════════════════════════════════════════════════════════════════
+
+    private fun startDepthScan(frame: Frame, tapX: Float, tapY: Float) {
+        val activeSession = session ?: return
+
+        // Find the table plane at the tap point
+        val tablePlaneY = depthProcessor.findTablePlaneY(activeSession, frame, tapX, tapY)
+        if (tablePlaneY == null) {
+            Toast.makeText(
+                this,
+                "No surface detected. Move the phone slowly to scan the area.",
+                Toast.LENGTH_LONG
+            ).show()
             return
         }
 
-        if (anchor1 == null) {
-            anchor1 = anchor
-            runOnUiThread {
-                instructionText.text = "✅ Head marked! Now tap the TAIL of the fish"
-                measureOverlay.setPoint1(screenX, screenY) // initial placement
-            }
-            Log.d(TAG, "Anchor 1 created at: [${worldPoint[0]}, ${worldPoint[1]}, ${worldPoint[2]}]")
-        } else {
-            anchor2 = anchor
-            Log.d(TAG, "Anchor 2 created at: [${worldPoint[0]}, ${worldPoint[1]}, ${worldPoint[2]}]")
-            calculateAndDisplay()
+        state = MeasureState.SCANNING
+        depthProcessor.reset()
+
+        // UI updates
+        measureOverlay.setPoint1(tapX, tapY)
+        measureOverlay.startScanProgress()
+        instructionText.text = "Scanning 3D point cloud…"
+        scanProgressBar.visibility = View.VISIBLE
+        tvFrameStatus.visibility = View.VISIBLE
+        tvDepthQuality.visibility = View.VISIBLE
+        tvFrameStatus.text = "Frame 0/$TARGET_FRAME_COUNT"
+        tvDepthQuality.text = "● Acquiring…"
+        tvDepthQuality.setTextColor(Color.parseColor("#FFD54F"))
+
+        // Launch depth accumulation coroutine
+        lifecycleScope.launch(Dispatchers.Default) {
+            accumulateDepthFrames(tablePlaneY, tapX, tapY)
         }
     }
 
     /**
-     * Get 3D world coordinates from ARCore Depth API.
-     * Samples a 5×5 grid around the tap point and averages the valid depth readings.
+     * Accumulate depth data over multiple frames for improved accuracy.
+     * Runs on Dispatchers.Default (background thread).
      */
-    private fun getPointFromDepth(frame: Frame, screenX: Float, screenY: Float): FloatArray? {
-        try {
-            val depthImage = frame.acquireDepthImage16Bits()
-            val depthW = depthImage.width
-            val depthH = depthImage.height
+    private suspend fun accumulateDepthFrames(tablePlaneY: Float, tapX: Float, tapY: Float) {
+        var attempts = 0
+        val maxAttempts = TARGET_FRAME_COUNT * 6  // Allow retries for stale/unavailable frames
 
-            val camera = frame.camera
-            val intrinsics = camera.imageIntrinsics
-            val fx = intrinsics.focalLength[0]
-            val fy = intrinsics.focalLength[1]
-            val cx = intrinsics.principalPoint[0]
-            val cy = intrinsics.principalPoint[1]
-            val imgDims = intrinsics.imageDimensions
+        while (depthProcessor.frameCount < TARGET_FRAME_COUNT && attempts < maxAttempts) {
+            attempts++
 
-            // Map screen coordinates to depth image coordinates
-            val viewW = glSurfaceView.width.toFloat()
-            val viewH = glSurfaceView.height.toFloat()
-            val depthU = (screenX / viewW * depthW).toInt().coerceIn(2, depthW - 3)
-            val depthV = (screenY / viewH * depthH).toInt().coerceIn(2, depthH - 3)
+            val frame = synchronized(frameLock) { currentFrame }
+            if (frame == null || frame.camera.trackingState != TrackingState.TRACKING) {
+                delay(FRAME_ACQUIRE_DELAY_MS)
+                continue
+            }
 
-            // Multi-point sampling: 5×5 grid around tap
-            val buffer = depthImage.planes[0].buffer
-            val rowStride = depthImage.planes[0].rowStride
-            var depthSum = 0f
-            var validCount = 0
+            val newPoints = depthProcessor.acquireAndProcessDepth(frame, tablePlaneY)
 
-            for (dy in -2..2) {
-                for (dx in -2..2) {
-                    val u = (depthU + dx).coerceIn(0, depthW - 1)
-                    val v = (depthV + dy).coerceIn(0, depthH - 1)
-                    val index = v * rowStride + u * 2
-                    if (index >= 0 && index < buffer.limit() - 1) {
-                        val depthMm = buffer.getShort(index).toInt() and 0xFFFF
-                        if (depthMm > 0 && depthMm < 10000) { // Valid range: 0-10m
-                            depthSum += depthMm
-                            validCount++
+            if (newPoints > 0) {
+                val frameNum = depthProcessor.frameCount
+                withContext(Dispatchers.Main) {
+                    tvFrameStatus.text = "Frame $frameNum/$TARGET_FRAME_COUNT"
+                    measureOverlay.setFrameProgress(frameNum, TARGET_FRAME_COUNT)
+
+                    // Update quality indicator
+                    val quality = when {
+                        depthProcessor.pointCount > 5000 -> {
+                            tvDepthQuality.setTextColor(Color.parseColor("#69F0AE"))
+                            "● Excellent"
+                        }
+                        depthProcessor.pointCount > 2000 -> {
+                            tvDepthQuality.setTextColor(Color.parseColor("#FFD54F"))
+                            "● Good"
+                        }
+                        else -> {
+                            tvDepthQuality.setTextColor(Color.parseColor("#FF5252"))
+                            "● Limited"
                         }
                     }
+                    tvDepthQuality.text = quality
                 }
             }
 
-            depthImage.close()
+            delay(FRAME_ACQUIRE_DELAY_MS)
+        }
 
-            if (validCount < 5) return null // Not enough valid depth readings
+        // ── Compute measurements ──
+        val frame = synchronized(frameLock) { currentFrame }
+        val camera = frame?.camera
+        val result = depthProcessor.computeMeasurements(
+            viewWidth = glSurfaceView.width.toFloat(),
+            viewHeight = glSurfaceView.height.toFloat(),
+            camera = camera
+        )
 
-            val avgDepthM = (depthSum / validCount) / 1000f
-
-            // Back-project to 3D using camera intrinsics
-            // Map screen coords to image coords
-            val imgX = screenX / viewW * imgDims[0]
-            val imgY = screenY / viewH * imgDims[1]
-
-            val worldX = (imgX - cx) * avgDepthM / fx
-            val worldY = (imgY - cy) * avgDepthM / fy
-            val worldZ = avgDepthM
-
-            Log.d(TAG, "Depth point: depth=${avgDepthM}m, validSamples=$validCount/25")
-
-            return floatArrayOf(worldX, worldY, worldZ)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Depth sampling failed: ${e.message}")
-            return null
+        withContext(Dispatchers.Main) {
+            if (result != null && result.pointCount >= 100) {
+                finalResult = result
+                state = MeasureState.RESULT_READY
+                showDepthResult(result, tapX, tapY)
+            } else {
+                state = MeasureState.IDLE
+                instructionText.text = getIdleInstruction()
+                scanProgressBar.visibility = View.GONE
+                tvFrameStatus.visibility = View.GONE
+                tvDepthQuality.visibility = View.GONE
+                measureOverlay.reset()
+                Toast.makeText(
+                    this@ArFishMeasureActivity,
+                    "Could not isolate 3D object. Tap directly on the fish.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
     }
 
-    /**
-     * Fallback: Get 3D coordinates from ARCore hit-test against detected surfaces.
-     */
-    private fun getPointFromHitTest(frame: Frame, screenX: Float, screenY: Float): FloatArray? {
+    private fun showDepthResult(result: MeasurementResult, tapX: Float, tapY: Float) {
+        scanProgressBar.visibility = View.GONE
+
+        instructionText.text = "✅ 3D Scan Complete! (${result.pointCount} points, ${result.framesUsed} frames)"
+
+        // Update overlay with bounding box
+        result.boundingBoxScreen?.let { box ->
+            measureOverlay.setBoundingBox(box.left, box.top, box.right, box.bottom)
+            measureOverlay.setPoint2Length(result.lengthCm)
+        }
+
+        // Populate result card
+        tvLength.text = "L: %.1f cm".format(result.lengthCm)
+        tvWidth.text = "W: %.1f cm".format(result.widthCm)
+        tvThickness.text = "H: %.1f cm".format(result.heightCm)
+        tvVolume.text = "%.0f cm³".format(result.volumeCm3)
+        tvWeight.text = "%.2f kg".format(result.weightGrams / 1000f)
+
+        val methodLabel = when (result.method) {
+            "RawDepth" -> "Raw Depth API (${result.framesUsed} frames)"
+            "Depth" -> "Depth API (${result.framesUsed} frames)"
+            else -> "HitTest"
+        }
+        tvMethod.text = "Method: $methodLabel"
+
+        resultCard.visibility = View.VISIBLE
+        resultCard.alpha = 0f
+        resultCard.animate().alpha(1f).setDuration(300).start()
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // HitTest Mode (Fallback for non-depth devices)
+    // ══════════════════════════════════════════════════════════════════════
+
+    private fun placeFirstAnchor(frame: Frame, screenX: Float, screenY: Float) {
+        val bestHit = findBestHit(frame, screenX, screenY)
+        if (bestHit == null) {
+            Toast.makeText(this, "No surface detected. Move the phone slowly.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         try {
-            val hits = frame.hitTest(screenX, screenY)
-            for (hit in hits) {
-                val trackable = hit.trackable
-                if (trackable is Plane && trackable.isPoseInPolygon(hit.hitPose)) {
-                    val pose = hit.hitPose
-                    return floatArrayOf(pose.tx(), pose.ty(), pose.tz())
-                }
-            }
-            // If no plane hit, try any hit
-            val firstHit = hits.firstOrNull()
-            if (firstHit != null) {
-                val pose = firstHit.hitPose
-                return floatArrayOf(pose.tx(), pose.ty(), pose.tz())
-            }
+            anchor1 = bestHit.createAnchor()
+            state = MeasureState.POINT1_PLACED
+            measureOverlay.setPoint1(screenX, screenY)
+            instructionText.text = "Now tap the other end of the fish"
         } catch (e: Exception) {
-            Log.e(TAG, "Hit-test failed: ${e.message}")
+            Log.e(TAG, "Failed to create anchor1", e)
+            Toast.makeText(this, "Failed to place point. Try again.", Toast.LENGTH_SHORT).show()
         }
-        return null
     }
+
+    private fun placeSecondAnchor(frame: Frame, screenX: Float, screenY: Float) {
+        val bestHit = findBestHit(frame, screenX, screenY)
+        if (bestHit == null) {
+            Toast.makeText(this, "No surface detected.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        try {
+            anchor2 = bestHit.createAnchor()
+            state = MeasureState.POINT2_PLACED
+
+            val p1 = anchor1!!.pose.translation
+            val p2 = anchor2!!.pose.translation
+            val dx = p1[0] - p2[0]
+            val dy = p1[1] - p2[1]
+            val dz = p1[2] - p2[2]
+            val distM = Math.sqrt((dx * dx + dy * dy + dz * dz).toDouble()).toFloat()
+            val distCm = distM * 100f
+
+            finalResult = MeasurementResult(
+                lengthCm = distCm,
+                widthCm = 0f,
+                heightCm = 0f,
+                volumeCm3 = 0f,
+                weightGrams = 0f,
+                pointCount = 2,
+                framesUsed = 1,
+                method = "HitTest"
+            )
+            state = MeasureState.RESULT_READY
+
+            measureOverlay.updatePoint2(screenX, screenY)
+            measureOverlay.setPoint2Length(distCm)
+
+            tvLength.text = "L: %.1f cm".format(distCm)
+            tvWidth.text = "—"
+            tvThickness.text = "—"
+            tvVolume.text = "—"
+            tvWeight.text = "—"
+            tvMethod.text = "Method: HitTest (2-point)"
+
+            instructionText.text = "✅ Measurement complete!"
+            resultCard.visibility = View.VISIBLE
+            resultCard.alpha = 0f
+            resultCard.animate().alpha(1f).setDuration(300).start()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to create anchor2", e)
+            Toast.makeText(this, "Failed to place point. Try again.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun findBestHit(frame: Frame, screenX: Float, screenY: Float): HitResult? {
+        val hits = frame.hitTest(screenX, screenY)
+        // Prefer plane hits
+        for (hit in hits) {
+            val trackable = hit.trackable
+            if (trackable is Plane && trackable.isPoseInPolygon(hit.hitPose)) {
+                return hit
+            }
+        }
+        return hits.firstOrNull()
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Overlay Position Updates
+    // ══════════════════════════════════════════════════════════════════════
 
     private fun updateOverlayPositions(camera: Camera) {
         val viewWidth = glSurfaceView.width.toFloat()
         val viewHeight = glSurfaceView.height.toFloat()
-
         if (viewWidth == 0f || viewHeight == 0f) return
 
         val projMatrix = FloatArray(16)
         camera.getProjectionMatrix(projMatrix, 0, 0.1f, 100.0f)
-
         val viewMatrix = FloatArray(16)
         camera.getViewMatrix(viewMatrix, 0)
-
         val viewProjMatrix = FloatArray(16)
         android.opengl.Matrix.multiplyMM(viewProjMatrix, 0, projMatrix, 0, viewMatrix, 0)
 
@@ -382,166 +546,193 @@ class ArFishMeasureActivity : ComponentActivity() {
         }
 
         runOnUiThread {
-            if (screenP1 != null) {
-                measureOverlay.updatePoint1(screenP1!!.x, screenP1!!.y)
-            }
-            if (screenP2 != null) {
-                measureOverlay.updatePoint2(screenP2!!.x, screenP2!!.y)
-            }
+            screenP1?.let { p1 -> measureOverlay.updatePoint1(p1.x, p1.y) }
+            screenP2?.let { p2 -> measureOverlay.updatePoint2(p2.x, p2.y) }
         }
     }
 
-    private fun projectToScreen(point3d: FloatArray, viewProj: FloatArray, width: Float, height: Float): android.graphics.PointF? {
+    private fun projectToScreen(
+        point3d: FloatArray, viewProj: FloatArray, width: Float, height: Float
+    ): android.graphics.PointF? {
         val vector4 = floatArrayOf(point3d[0], point3d[1], point3d[2], 1.0f)
         val result = FloatArray(4)
         android.opengl.Matrix.multiplyMV(result, 0, viewProj, 0, vector4, 0)
 
-        if (result[3] <= 0) return null // Behind camera
-
+        if (result[3] <= 0) return null
         val w = result[3]
         val ndcX = result[0] / w
         val ndcY = result[1] / w
 
         val screenX = ((ndcX + 1.0f) / 2.0f) * width
-        val screenY = ((1.0f - ndcY) / 2.0f) * height // Y is flipped in 2D
+        val screenY = ((1.0f - ndcY) / 2.0f) * height
         return android.graphics.PointF(screenX, screenY)
     }
 
-    private fun calculateAndDisplay() {
-        val a1 = anchor1 ?: return
-        val a2 = anchor2 ?: return
-        
-        val p1 = a1.pose.translation
-        val p2 = a2.pose.translation
+    // ══════════════════════════════════════════════════════════════════════
+    // UI Helpers
+    // ══════════════════════════════════════════════════════════════════════
 
-        // 3D Euclidean distance
-        val dx = p2[0] - p1[0]
-        val dy = p2[1] - p1[1]
-        val dz = p2[2] - p1[2]
-        val distanceM = sqrt(dx * dx + dy * dy + dz * dz)
-        val lengthCm = distanceM * 100f
-
-        // Morphometric estimation
-        val widthCm = lengthCm / LENGTH_TO_WIDTH_RATIO
-        val thicknessCm = widthCm / WIDTH_TO_THICKNESS_RATIO
-
-        // Ellipsoid volume: V = (π/6) × L × W × T
-        val volumeCm3 = (Math.PI / 6.0 * lengthCm * widthCm * thicknessCm).toFloat()
-
-        // Weight from volume and density
-        val weightGrams = volumeCm3 * FISH_DENSITY_G_CM3
-        val weightKg = weightGrams / 1000f
-
-        // Store for saving
-        finalLengthCm = lengthCm
-        finalVolumeCm3 = volumeCm3
-        finalWeightGrams = weightGrams
-
-        Log.d(TAG, "=== MEASUREMENT RESULT ===")
-        Log.d(TAG, "Length: %.1f cm".format(lengthCm))
-        Log.d(TAG, "Width: %.1f cm".format(widthCm))
-        Log.d(TAG, "Thickness: %.1f cm".format(thicknessCm))
-        Log.d(TAG, "Volume: %.0f cm³".format(volumeCm3))
-        Log.d(TAG, "Weight: %.2f kg".format(weightKg))
-
-        runOnUiThread {
-            instructionText.text = "✅ Measurement complete!"
-
-            // Give the overlay the final length so it can display the label
-            measureOverlay.setPoint2Length(lengthCm)
-
-            tvLength.text = "%.1f cm".format(lengthCm)
-            tvWidth.text = "%.1f cm".format(widthCm)
-            tvThickness.text = "%.1f cm".format(thicknessCm)
-            tvVolume.text = "%.0f cm³".format(volumeCm3)
-            tvWeight.text = "%.2f kg".format(weightKg)
-
-            resultCard.visibility = View.VISIBLE
-            resultCard.alpha = 0f
-            resultCard.animate().alpha(1f).setDuration(300).start()
+    private fun updateTrackingStatus(trackingState: TrackingState) {
+        when (trackingState) {
+            TrackingState.TRACKING -> {
+                tvTrackingStatus.text = "● Tracking"
+                tvTrackingStatus.setTextColor(Color.parseColor("#69F0AE"))
+            }
+            TrackingState.PAUSED -> {
+                tvTrackingStatus.text = "● Limited — move slowly"
+                tvTrackingStatus.setTextColor(Color.parseColor("#FFD54F"))
+            }
+            TrackingState.STOPPED -> {
+                tvTrackingStatus.text = "● Stopped"
+                tvTrackingStatus.setTextColor(Color.parseColor("#FF5252"))
+            }
         }
     }
+
+    private fun getIdleInstruction(): String {
+        return if (depthProcessor.isDepthSupported) {
+            "Tap the fish to perform a 3D Mesh Scan"
+        } else {
+            "Tap the head of the fish to start measuring"
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Reset
+    // ══════════════════════════════════════════════════════════════════════
 
     private fun resetMeasurement() {
         anchor1?.detach()
         anchor2?.detach()
         anchor1 = null
         anchor2 = null
-        instructionText.text = "Tap the HEAD of the fish to start measuring"
+        finalResult = null
+        depthProcessor.reset()
+        state = MeasureState.IDLE
+
+        instructionText.text = getIdleInstruction()
         measureOverlay.reset()
+        scanProgressBar.visibility = View.GONE
+        tvFrameStatus.visibility = View.GONE
+        tvDepthQuality.visibility = View.GONE
+
         resultCard.animate().alpha(0f).setDuration(200).withEndAction {
             resultCard.visibility = View.GONE
         }.start()
+
         btnSave.isEnabled = true
-        btnSave.text = "Save Measurement"
+        btnSave.text = "💾  Save Measurement"
     }
 
+    // ══════════════════════════════════════════════════════════════════════
+    // Save to Database
+    // ══════════════════════════════════════════════════════════════════════
+
     private fun saveMeasurementToDb() {
+        val result = finalResult ?: return
         val appContext = applicationContext
-        
         btnSave.isEnabled = false
-        btnSave.text = "Saving..."
+        btnSave.text = "Saving…"
 
         val width = glSurfaceView.width
         val height = glSurfaceView.height
-        if (width == 0 || height == 0) {
-            fallbackSave(appContext)
+        if (width <= 0 || height <= 0) {
+            fallbackSave(appContext, result)
             return
         }
 
-        val arBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        
         try {
-            val handlerThread = android.os.HandlerThread("PixelCopier")
+            val arBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val handlerThread = HandlerThread("PixelCopier")
             handlerThread.start()
-            PixelCopy.request(glSurfaceView, arBitmap, { copyResult ->
-                if (copyResult == PixelCopy.SUCCESS) {
-                    val compositeBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-                    val canvas = Canvas(compositeBitmap)
-                    
-                    canvas.drawBitmap(arBitmap, 0f, 0f, null)
-                    measureOverlay.draw(canvas)
-                    
-                    finishSaving(appContext, compositeBitmap)
-                } else {
-                    Log.e(TAG, "PixelCopy failed: $copyResult")
-                    fallbackSave(appContext)
-                }
+            val handler = Handler(handlerThread.looper)
+
+            // Timeout fallback
+            val timeoutRunnable = Runnable {
+                Log.w(TAG, "PixelCopy timed out — using fallback")
+                arBitmap.recycle()
                 handlerThread.quitSafely()
-            }, android.os.Handler(handlerThread.looper))
+                fallbackSave(appContext, result)
+            }
+            handler.postDelayed(timeoutRunnable, 5000)
+
+            PixelCopy.request(glSurfaceView, arBitmap, { copyResult ->
+                handler.removeCallbacks(timeoutRunnable)
+                try {
+                    if (copyResult == PixelCopy.SUCCESS) {
+                        val compositeBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                        val canvas = Canvas(compositeBitmap)
+                        canvas.drawBitmap(arBitmap, 0f, 0f, null)
+                        measureOverlay.draw(canvas)
+                        finishSaving(appContext, compositeBitmap, result)
+                    } else {
+                        Log.e(TAG, "PixelCopy failed with code $copyResult")
+                        fallbackSave(appContext, result)
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error in PixelCopy callback", e)
+                    fallbackSave(appContext, result)
+                } finally {
+                    arBitmap.recycle()
+                    handlerThread.quitSafely()
+                }
+            }, handler)
         } catch (e: Exception) {
-            e.printStackTrace()
-            fallbackSave(appContext)
+            Log.e(TAG, "Failed to initiate save", e)
+            fallbackSave(appContext, result)
         }
     }
 
-    private fun fallbackSave(appContext: android.content.Context) {
+    private fun fallbackSave(appContext: android.content.Context, result: MeasurementResult) {
         val emptyBitmap = Bitmap.createBitmap(480, 640, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(emptyBitmap)
-        canvas.drawColor(android.graphics.Color.DKGRAY)
+        canvas.drawColor(Color.DKGRAY)
         measureOverlay.draw(canvas)
-        finishSaving(appContext, emptyBitmap)
+        finishSaving(appContext, emptyBitmap, result)
     }
 
-    private fun finishSaving(context: android.content.Context, combinedBitmap: Bitmap) {
+    private fun finishSaving(
+        context: android.content.Context,
+        bitmap: Bitmap,
+        result: MeasurementResult
+    ) {
         try {
             val filename = "ar_measure_${System.currentTimeMillis()}.jpg"
             val file = File(context.filesDir, filename)
             val out = FileOutputStream(file)
-            combinedBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
             out.flush(); out.close()
 
-            val methodLabel = if (depthSupported) "ARCore Depth API" else "ARCore HitTest"
-            val details = "Method: $methodLabel;;;Est. Volume: ${String.format("%.0f", finalVolumeCm3)}cm3;;;Est. Weight: ${String.format("%.0f", finalWeightGrams)}g"
-            
+            val details = "Method: ${result.method};;;" +
+                    "Est. Volume: ${"%.0f".format(result.volumeCm3)}cm3;;;" +
+                    "Est. Weight: ${"%.0f".format(result.weightGrams)}g;;;" +
+                    "Points: ${result.pointCount};;;" +
+                    "Frames: ${result.framesUsed}"
+
             val title = "Fishing Metrics - AR"
 
             val db = DatabaseHelper(context)
-            db.insertLog(System.currentTimeMillis(), file.absolutePath, title, details, 0.0, 0.0, "AR Measurement", 1)
+            db.insertLog(
+                System.currentTimeMillis(),
+                file.absolutePath,
+                title,
+                details,
+                0.0, 0.0,
+                "AR Measurement",
+                2
+            )
 
-            val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
-            val syncRequest = OneTimeWorkRequest.Builder(SyncWorker::class.java).setConstraints(constraints).setBackoffCriteria(BackoffPolicy.LINEAR, 10, TimeUnit.SECONDS).build()
-            WorkManager.getInstance(context).enqueueUniqueWork("HistoryUploadWork", ExistingWorkPolicy.APPEND_OR_REPLACE, syncRequest)
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+            val syncRequest = OneTimeWorkRequest.Builder(SyncWorker::class.java)
+                .setConstraints(constraints)
+                .setBackoffCriteria(BackoffPolicy.LINEAR, 10, TimeUnit.SECONDS)
+                .build()
+            WorkManager.getInstance(context)
+                .enqueueUniqueWork("HistoryUploadWork", ExistingWorkPolicy.APPEND_OR_REPLACE, syncRequest)
+
+            state = MeasureState.SAVED
 
             runOnUiThread {
                 Toast.makeText(context, "Measurement Saved!", Toast.LENGTH_SHORT).show()
@@ -552,10 +743,16 @@ class ArFishMeasureActivity : ComponentActivity() {
             runOnUiThread {
                 Toast.makeText(context, "Failed to save: ${e.message}", Toast.LENGTH_SHORT).show()
                 btnSave.isEnabled = true
-                btnSave.text = "Save Measurement"
+                btnSave.text = "💾  Save Measurement"
             }
+        } finally {
+            bitmap.recycle()
         }
     }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Permissions & Lifecycle
+    // ══════════════════════════════════════════════════════════════════════
 
     private fun hasCameraPermission(): Boolean =
         ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
@@ -563,6 +760,64 @@ class ArFishMeasureActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+
+        if (!hasCameraPermission()) return
+
+        // Check ARCore availability and prompt install if needed
+        try {
+            val installStatus = ArCoreApk.getInstance().requestInstall(this, !installRequested)
+            if (installStatus == ArCoreApk.InstallStatus.INSTALL_REQUESTED) {
+                installRequested = true
+                return
+            }
+        } catch (e: UnavailableException) {
+            Toast.makeText(this, "ARCore is not available: ${e.message}", Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
+
+        // Create session if needed
+        if (session == null) {
+            try {
+                session = Session(this).also { newSession ->
+                    depthProcessor.configureSession(newSession)
+
+                    val methodLabel = when {
+                        depthProcessor.isRawDepthSupported -> "Raw Depth + Confidence"
+                        depthProcessor.isDepthSupported -> "Depth (Smoothed)"
+                        else -> "HitTest Only"
+                    }
+                    tvMethod.text = "Method: $methodLabel"
+                    instructionText.text = getIdleInstruction()
+                }
+
+                Log.d(TAG, "AR session created successfully")
+            } catch (e: UnavailableArcoreNotInstalledException) {
+                Toast.makeText(this, "ARCore is not installed. Please install from Play Store.", Toast.LENGTH_LONG).show()
+                finish()
+                return
+            } catch (e: UnavailableDeviceNotCompatibleException) {
+                Toast.makeText(this, "This device does not support ARCore.", Toast.LENGTH_LONG).show()
+                finish()
+                return
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to create AR session", e)
+                Toast.makeText(this, "AR initialization failed: ${e.message}", Toast.LENGTH_LONG).show()
+                finish()
+                return
+            }
+        }
+
+        // Resume session
+        try {
+            session?.resume()
+        } catch (e: CameraNotAvailableException) {
+            Toast.makeText(this, "Camera not available. Please restart the app.", Toast.LENGTH_LONG).show()
+            session = null
+            finish()
+            return
+        }
+
         glSurfaceView.onResume()
     }
 
@@ -574,11 +829,16 @@ class ArFishMeasureActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        anchor1?.detach()
+        anchor2?.detach()
+        backgroundRenderer.destroy()
         session?.close()
         session = null
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+    override fun onRequestPermissionsResult(
+        requestCode: Int, permissions: Array<String>, grantResults: IntArray
+    ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == CAMERA_PERMISSION_CODE && !hasCameraPermission()) {
             Toast.makeText(this, "Camera permission is required for AR measurement", Toast.LENGTH_LONG).show()

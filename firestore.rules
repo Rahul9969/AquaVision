@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── history collection ─────────────────────────────────────────────────────
+    // Documents are keyed as "{authUid}_{localItemId}".
+    // Any authenticated user (including anonymous) can create/update their own docs.
+    // Reading is allowed if the caller is authenticated (for future community feed).
+    match /history/{docId} {
+      // Allow write if:
+      //   1. The user is authenticated (anonymous or full auth), AND
+      //   2. The document's user.auth_uid field matches the caller's UID.
+      allow create: if request.auth != null
+                    && request.resource.data.user.auth_uid == request.auth.uid;
+
+      allow update: if request.auth != null
+                    && resource.data.user.auth_uid == request.auth.uid;
+
+      allow delete: if request.auth != null
+                    && resource.data.user.auth_uid == request.auth.uid;
+
+      // Allow authenticated reads (e.g. community leaderboard / map pins)
+      allow read: if request.auth != null;
+    }
+  }
+}

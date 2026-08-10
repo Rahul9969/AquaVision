@@ -22,7 +22,8 @@ data class HistoryItem(
     val lng: Double,
     val placeName: String,
     val type: Int,
-    val isSynced: Int = 0
+    val isSynced: Int = 0,
+    val metricsJson: String? = null
 )
 
 class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
@@ -39,16 +40,61 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, D
                 + COLUMN_LNG + " REAL,"
                 + COLUMN_PLACE_NAME + " TEXT,"
                 + COLUMN_TYPE + " INTEGER DEFAULT 0,"
-                + COLUMN_SYNCED + " INTEGER DEFAULT 0" + ")")
+                + COLUMN_SYNCED + " INTEGER DEFAULT 0,"
+                + COLUMN_METRICS_JSON + " TEXT" + ")")
         db.execSQL(createTable)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_NAME")
-        onCreate(db)
+        android.util.Log.i("DatabaseHelper", "Upgrading database from version $oldVersion to $newVersion")
+        try {
+            db.beginTransaction()
+            
+            // 1. Rename existing table to a backup table
+            val backupTableName = TABLE_NAME + "_backup"
+            db.execSQL("ALTER TABLE $TABLE_NAME RENAME TO $backupTableName")
+            
+            // 2. Create the new table with the updated schema
+            onCreate(db)
+            
+            // 3. Get intersection of columns between old and new tables
+            val cursor1 = db.rawQuery("PRAGMA table_info($TABLE_NAME)", null)
+            val newColumns = mutableListOf<String>()
+            while (cursor1.moveToNext()) {
+                newColumns.add(cursor1.getString(1))
+            }
+            cursor1.close()
+            
+            val cursor2 = db.rawQuery("PRAGMA table_info($backupTableName)", null)
+            val oldColumns = mutableListOf<String>()
+            while (cursor2.moveToNext()) {
+                oldColumns.add(cursor2.getString(1))
+            }
+            cursor2.close()
+            
+            val commonColumns = newColumns.intersect(oldColumns.toSet()).joinToString(",")
+            
+            // 4. Copy data over for matching columns
+            if (commonColumns.isNotEmpty()) {
+                db.execSQL("INSERT INTO $TABLE_NAME ($commonColumns) SELECT $commonColumns FROM $backupTableName")
+            }
+            
+            // 5. Clean up backup table
+            db.execSQL("DROP TABLE $backupTableName")
+            
+            db.setTransactionSuccessful()
+            android.util.Log.i("DatabaseHelper", "Database migration successful")
+        } catch (e: Exception) {
+            android.util.Log.e("DatabaseHelper", "Database migration failed: ${e.message}. Falling back to destructive upgrade.")
+            // Fallback if migration fails
+            db.execSQL("DROP TABLE IF EXISTS $TABLE_NAME")
+            onCreate(db)
+        } finally {
+            db.endTransaction()
+        }
     }
 
-    fun insertLog(timestamp: Long, imagePath: String, title: String, details: String, lat: Double, lng: Double, placeName: String, type: Int): Long {
+    fun insertLog(timestamp: Long, imagePath: String, title: String, details: String, lat: Double, lng: Double, placeName: String, type: Int, metricsJson: String? = null): Long {
         val db = this.writableDatabase
         val values = ContentValues()
         values.put(COLUMN_TIMESTAMP, timestamp)
@@ -60,11 +106,12 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, D
         values.put(COLUMN_PLACE_NAME, placeName)
         values.put(COLUMN_TYPE, type)
         values.put(COLUMN_SYNCED, 0)
+        metricsJson?.let { values.put(COLUMN_METRICS_JSON, it) }
         return db.insert(TABLE_NAME, null, values)
     }
 
-    fun insertDetection(timestamp: Long, imagePath: String, fishCount: String, details: String, lat: Double, lng: Double, placeName: String): Long {
-        return insertLog(timestamp, imagePath, fishCount, details, lat, lng, placeName, TYPE_DETECTION)
+    fun insertDetection(timestamp: Long, imagePath: String, fishCount: String, details: String, lat: Double, lng: Double, placeName: String, metricsJson: String? = null): Long {
+        return insertLog(timestamp, imagePath, fishCount, details, lat, lng, placeName, TYPE_DETECTION, metricsJson)
     }
 
     fun getUnsyncedLogs(): List<HistoryItem> {
@@ -370,11 +417,14 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, D
         val syncedIndex = cursor.getColumnIndex(COLUMN_SYNCED)
         val synced = if(syncedIndex != -1) cursor.getInt(syncedIndex) else 0
 
-        return HistoryItem(id, timestamp, imagePath, title, details, lat, lng, placeName, itemType, synced)
+        val metricsIndex = cursor.getColumnIndex(COLUMN_METRICS_JSON)
+        val metricsJson = if(metricsIndex != -1) cursor.getString(metricsIndex) else null
+
+        return HistoryItem(id, timestamp, imagePath, title, details, lat, lng, placeName, itemType, synced, metricsJson)
     }
 
     companion object {
-        private const val DATABASE_VERSION = 5
+        private const val DATABASE_VERSION = 6
         private const val DATABASE_NAME = "FishDetectionDB"
         const val TABLE_NAME = "detections"
         const val COLUMN_ID = "id"
@@ -387,6 +437,7 @@ class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(context, D
         const val COLUMN_PLACE_NAME = "place_name"
         const val COLUMN_TYPE = "type"
         const val COLUMN_SYNCED = "is_synced"
+        const val COLUMN_METRICS_JSON = "metrics_json"
 
         const val TYPE_DETECTION = 0
         const val TYPE_FRESHNESS = 1

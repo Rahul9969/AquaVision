@@ -55,13 +55,35 @@
             android:layout_weight="1"
             android:orientation="vertical">
 
-            <TextView
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/fish_ai"
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
-                android:fontFamily="sans-serif-medium" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/fish_ai"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:fontFamily="sans-serif-medium" />
+
+                <TextView
+                    android:id="@+id/tvModelBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="2dp"
+                    android:paddingBottom="2dp"
+                    android:text="Gemma 2B"
+                    android:textColor="#80CBC4"
+                    android:textSize="10sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:background="@drawable/bg_model_badge" />
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/tvStatus"
@@ -72,6 +94,7 @@
                 android:textSize="12sp"
                 android:fontFamily="sans-serif" />
         </LinearLayout>
+
     </LinearLayout>
 
     <!-- Messages RecyclerView -->

@@ -1,4 +1,4 @@
-﻿<resources>
+<resources>
     <string name="app_name">AquaVision</string>
     <string name="gpu">GPU</string>
 
@@ -92,11 +92,26 @@
     <string name="copying_model_progress">Copying model: %1$d%%</string>
     <string name="copy_complete">Copy Complete!</string>
     <string name="failed_to_copy_file">Failed to copy file. Try again.</string>
-    <string name="fish_ai_ready">Fish AI Ready! Ask me anything.</string>
+    <string name="ai_model_settings">AI Model Settings</string>
+    <string name="current_model">Current Model</string>
+    <string name="select_model">Select AI Model</string>
+    <string name="model_download_links">Download Models</string>
+    <string name="download_gemma">Download Gemma 2B (Recommended)</string>
+    <string name="download_qwen">Download Qwen 2.5-0.5B (Fastest)</string>
+    <string name="download_tinyllama">Download TinyLlama (Smallest)</string>
+    <string name="no_model_loaded">No model loaded</string>
+    <string name="model_loaded">Model: %1$s</string>
+    <string name="model_size">Size: %1$s</string>
+    <string name="tap_to_select">Tap to load from files</string>
+    <string name="model_features">Features</string>
+    <string name="gemma_desc">Balanced speed and quality. Good for detailed responses.</string>
+    <string name="qwen_desc">Fastest response. Great for quick answers.</string>
+    <string name="tinyllama_desc">Smallest download (~700MB). Fastest on low-end devices.</string>
+    <string name="fish_ai_ready">Fish AI Ready! Ask me about fish species, sustainable fishing, regulations, or how to use the app. I can only advise — always follow local laws.\n\n⚠️ Estimates are indicative only, not for commercial or legal use.</string>
     <string name="error_ram_low_or_model_invalid">Error: RAM too low or Model invalid.\n%1$s</string>
     <string name="chat_error">Error: %1$s</string>
     <string name="location_data_not_available">Location data not available</string>
-    <string name="no_freshness_logs">No Freshness Logs</string>
+    <string name="no_freshness_logs">No Eye-Condition Logs</string>
     <string name="no_volume_logs">No Volume Logs</string>
     <string name="no_detections_found">No Detections Found</string>
     <string name="fish_error">Fish Error: %1$s</string>
@@ -143,18 +158,18 @@
     <string name="model_not_found_title">Model not found</string>
     <string name="download_model_link">Tap here to Download Model</string>
     <string name="select_model_file">Select Model File</string>
-    <string name="freshness_ai">Freshness AI</string>
+    <string name="freshness_ai">Eye-Condition AI</string>
     <string name="step_1_inspect_eyes">Step 1: Inspect Eyes</string>
     <string name="ready_to_scan">Ready to scan</string>
     <string name="step_2_inspect_gills">Step 2: Inspect Gills</string>
     <string name="final_verdict">FINAL VERDICT</string>
     <string name="scan_both_parts">Scan both parts</string>
     <string name="save_record">Save Record</string>
-    <string name="save_this_freshness_log">Save this Freshness Log?</string>
+    <string name="save_this_freshness_log">Save this Eye-Condition Log?</string>
     <string name="cancel">Cancel</string>
     <string name="saved_history">Saved History</string>
     <string name="classification">Classification</string>
-    <string name="freshness">Freshness</string>
+    <string name="freshness">Eye Condition</string>
     <string name="volume">Volume</string>
     <string name="no_saved_records_found">No saved records found</string>
     <string name="date">Date</string>
@@ -180,7 +195,7 @@
     <string name="error_starting_camera">Error starting camera</string>
     <string name="crop_eyes">Crop Eyes</string>
     <string name="crop_gills">Crop Gills</string>
-    <string name="check_freshness">Check Freshness</string>
+    <string name="check_freshness">Check Eye Condition</string>
     <string name="ai_chat">AI Chat</string>
     <string name="map">Map</string>
     <string name="detection_detail">Detection Detail</string>

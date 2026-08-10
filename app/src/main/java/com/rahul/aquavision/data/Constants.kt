@@ -1,7 +1,7 @@
 package com.rahul.aquavision.data
 
 object Constants {
-    const val MODEL_PATH = "model.tflite"
+    const val MODEL_PATH = "model_yolov11m_float16.tflite"
     const val LABELS_PATH = "labels.txt"
     const val SEG_MODEL_PATH = "seg_model.tflite" // New
 

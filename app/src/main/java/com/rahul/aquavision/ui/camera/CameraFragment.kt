@@ -973,6 +973,25 @@ class CameraFragment : Fragment(), Detector.DetectorListener {
 
             val details = "$freshnessString Total: ${resultsToSave.size}, Eyes: ${eyesToSave.size}, Conf: ${resultsToSave.map { String.format("%.2f", it.cnf) }}"
 
+            val metricsObj = org.json.JSONObject()
+            val speciesObj = org.json.JSONObject()
+            resultsToSave.groupBy { it.clsName }.forEach { (cls, boxes) ->
+                speciesObj.put(cls, boxes.size)
+            }
+            metricsObj.put("species", speciesObj)
+            metricsObj.put("totalCatches", resultsToSave.size)
+
+            if (eyesToSave.isNotEmpty()) {
+                val eyeObj = org.json.JSONObject()
+                eyeObj.put("total", eyesToSave.size)
+                val freshCount = eyesToSave.count { box ->
+                    val label = box.clsName.lowercase()
+                    !label.contains("non") && !label.contains("spoil")
+                }
+                eyeObj.put("fresh", freshCount)
+                metricsObj.put("eyeCondition", eyeObj)
+            }
+
             val db = DatabaseHelper(context)
             db.insertDetection(
                 timestamp = System.currentTimeMillis(),
@@ -981,7 +1000,8 @@ class CameraFragment : Fragment(), Detector.DetectorListener {
                 details = details,
                 lat = lat,
                 lng = lng,
-                placeName = placeName
+                placeName = placeName,
+                metricsJson = metricsObj.toString()
             )
 
             lifecycleScope.launch(Dispatchers.Main) {

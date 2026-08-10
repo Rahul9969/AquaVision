@@ -11,77 +11,156 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- Measurement overlay (markers + line) -->
+    <!-- Measurement overlay (markers + line + crosshair) -->
     <com.rahul.aquavision.ar.ArMeasureOverlay
         android:id="@+id/measure_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- Top Bar: Back + Instruction -->
+    <!-- Top Bar: Back + Instruction + Status -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:padding="16dp"
-        android:background="#88000000">
+        android:orientation="vertical"
+        android:background="@drawable/bg_ar_top_gradient">
 
-        <ImageButton
-            android:id="@+id/btn_back"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_arrow_right"
-            android:rotation="180"
-            app:tint="@color/white"
-            android:contentDescription="Back" />
-
-        <TextView
-            android:id="@+id/tv_instruction"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="12dp"
-            android:text="Tap the HEAD of the fish to start measuring"
-            android:textColor="@color/white"
-            android:textSize="15sp"
-            android:fontFamily="sans-serif-medium" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="4dp">
 
-        <ImageButton
-            android:id="@+id/btn_reset"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@android:drawable/ic_menu_rotate"
-            app:tint="@color/white"
-            android:contentDescription="Reset" />
+            <ImageButton
+                android:id="@+id/btn_back"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:padding="8dp"
+                android:background="@drawable/bg_circle_translucent"
+                android:src="@drawable/ic_arrow_right"
+                android:rotation="180"
+                app:tint="@color/white"
+                android:contentDescription="Back" />
+
+            <TextView
+                android:id="@+id/tv_instruction"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:layout_marginEnd="8dp"
+                android:text="Tap the fish to perform a 3D Mesh Scan"
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                android:fontFamily="sans-serif-medium" />
+
+            <ImageButton
+                android:id="@+id/btn_reset"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:padding="8dp"
+                android:background="@drawable/bg_circle_translucent"
+                android:src="@android:drawable/ic_menu_rotate"
+                app:tint="@color/white"
+                android:contentDescription="Reset" />
+        </LinearLayout>
+
+        <!-- Tracking Status + Scan Progress -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/tv_tracking_status"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="● Initializing..."
+                    android:textColor="#FFD54F"
+                    android:textSize="12sp"
+                    android:fontFamily="sans-serif-medium" />
+
+                <ProgressBar
+                    android:id="@+id/scan_progress_bar"
+                    style="@android:style/Widget.ProgressBar.Horizontal"
+                    android:layout_width="0dp"
+                    android:layout_height="3dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="16dp"
+                    android:indeterminate="true"
+                    android:indeterminateTint="#00E5FF"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- Frame accumulation status + depth quality (shown during scanning) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="4dp">
+
+                <TextView
+                    android:id="@+id/tv_frame_status"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Frame 0/4"
+                    android:textColor="#B0BEC5"
+                    android:textSize="11sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/tv_depth_quality"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="● Acquiring…"
+                    android:textColor="#FFD54F"
+                    android:textSize="11sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:layout_marginStart="12dp"
+                    android:visibility="gone" />
+            </LinearLayout>
+        </LinearLayout>
     </LinearLayout>
 
-    <!-- Bottom Result Card (hidden by default) -->
+    <!-- Bottom Result Card -->
     <androidx.cardview.widget.CardView
         android:id="@+id/result_card"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        android:layout_margin="16dp"
-        app:cardCornerRadius="20dp"
-        app:cardBackgroundColor="#CC1A1A2E"
-        app:cardElevation="12dp"
+        android:layout_margin="12dp"
+        app:cardCornerRadius="24dp"
+        app:cardBackgroundColor="#E61A1A2E"
+        app:cardElevation="16dp"
         android:visibility="gone">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="24dp">
+            android:padding="20dp">
 
             <!-- Title Row -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Measurement Result"
+                android:text="📐 Measurement Result"
                 android:textColor="@color/white"
-                android:textSize="20sp"
+                android:textSize="18sp"
                 android:textStyle="bold"
                 android:layout_marginBottom="4dp" />
 
@@ -92,14 +171,14 @@
                 android:text="Method: —"
                 android:textColor="#80CBC4"
                 android:textSize="12sp"
-                android:layout_marginBottom="16dp" />
+                android:layout_marginBottom="14dp" />
 
-            <!-- Dimensions Row -->
+            <!-- Dimensions Row: L W H -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginBottom="12dp">
+                android:layout_marginBottom="10dp">
 
                 <!-- Length -->
                 <LinearLayout
@@ -109,12 +188,12 @@
                     android:gravity="center"
                     android:orientation="vertical"
                     android:padding="12dp"
-                    android:background="@drawable/bg_sub_card">
+                    android:background="@drawable/bg_ar_sub_card">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Length"
+                        android:text="📏 Length"
                         android:textColor="#B0BEC5"
                         android:textSize="11sp" />
 
@@ -123,13 +202,13 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="--"
-                        android:textColor="@color/white"
+                        android:textColor="#00E5FF"
                         android:textSize="18sp"
                         android:textStyle="bold" />
                 </LinearLayout>
 
                 <View
-                    android:layout_width="8dp"
+                    android:layout_width="6dp"
                     android:layout_height="0dp" />
 
                 <!-- Width -->
@@ -140,12 +219,12 @@
                     android:gravity="center"
                     android:orientation="vertical"
                     android:padding="12dp"
-                    android:background="@drawable/bg_sub_card">
+                    android:background="@drawable/bg_ar_sub_card">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Width"
+                        android:text="↔ Width"
                         android:textColor="#B0BEC5"
                         android:textSize="11sp" />
 
@@ -154,13 +233,13 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="--"
-                        android:textColor="@color/white"
+                        android:textColor="#00E5FF"
                         android:textSize="18sp"
                         android:textStyle="bold" />
                 </LinearLayout>
 
                 <View
-                    android:layout_width="8dp"
+                    android:layout_width="6dp"
                     android:layout_height="0dp" />
 
                 <!-- Thickness -->
@@ -171,12 +250,12 @@
                     android:gravity="center"
                     android:orientation="vertical"
                     android:padding="12dp"
-                    android:background="@drawable/bg_sub_card">
+                    android:background="@drawable/bg_ar_sub_card">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Thickness"
+                        android:text="↕ Height"
                         android:textColor="#B0BEC5"
                         android:textSize="11sp" />
 
@@ -185,7 +264,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="--"
-                        android:textColor="@color/white"
+                        android:textColor="#00E5FF"
                         android:textSize="18sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -195,7 +274,8 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:layout_marginBottom="4dp">
 
                 <!-- Volume -->
                 <LinearLayout
@@ -204,13 +284,13 @@
                     android:layout_weight="1"
                     android:gravity="center"
                     android:orientation="vertical"
-                    android:padding="16dp"
-                    android:background="@drawable/bg_sub_card">
+                    android:padding="14dp"
+                    android:background="@drawable/bg_ar_sub_card">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Volume"
+                        android:text="📦 Volume"
                         android:textColor="#B0BEC5"
                         android:textSize="11sp" />
 
@@ -225,7 +305,7 @@
                 </LinearLayout>
 
                 <View
-                    android:layout_width="8dp"
+                    android:layout_width="6dp"
                     android:layout_height="0dp" />
 
                 <!-- Weight -->
@@ -235,13 +315,13 @@
                     android:layout_weight="1"
                     android:gravity="center"
                     android:orientation="vertical"
-                    android:padding="16dp"
-                    android:background="@drawable/bg_sub_card">
+                    android:padding="14dp"
+                    android:background="@drawable/bg_ar_sub_card">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Est. Weight"
+                        android:text="⚖ Est. Weight"
                         android:textColor="#B0BEC5"
                         android:textSize="11sp" />
 
@@ -259,13 +339,14 @@
             <Button
                 android:id="@+id/btn_save"
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginTop="16dp"
-                android:text="Save Measurement"
-                android:textSize="16sp"
+                android:layout_height="52dp"
+                android:layout_marginTop="14dp"
+                android:text="💾  Save Measurement"
+                android:textSize="15sp"
                 android:textColor="@android:color/white"
                 android:textStyle="bold"
-                android:backgroundTint="#0288D1"/>
+                android:background="@drawable/bg_ar_save_button"
+                android:stateListAnimator="@null" />
 
         </LinearLayout>
     </androidx.cardview.widget.CardView>

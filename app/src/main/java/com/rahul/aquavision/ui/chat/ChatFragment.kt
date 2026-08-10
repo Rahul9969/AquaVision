@@ -24,7 +24,7 @@ import kotlinx.coroutines.withContext
 
 class ChatFragment : Fragment(R.layout.fragment_chat) {
 
-    private lateinit var llmHelper: LlmHelper
+    private var llmHelper: LlmHelper? = null
     private lateinit var modelManager: ModelManager
     private lateinit var chatAdapter: ChatAdapter
 
@@ -33,6 +33,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private lateinit var btnSend: ImageButton
     private lateinit var btnScrollDown: FloatingActionButton
     private lateinit var tvStatus: TextView
+    private lateinit var tvModelBadge: TextView
 
     // Overlay Components
     private lateinit var progressOverlay: View
@@ -43,6 +44,9 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
     private var isGenerating = false
     private val mainHandler = Handler(Looper.getMainLooper())
+
+    // Track which model path is currently loaded to detect switches
+    private var currentModelPath: String? = null
 
     private val pickModelLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         if (uri != null) {
@@ -59,6 +63,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         btnSend = view.findViewById(R.id.btnSend)
         btnScrollDown = view.findViewById(R.id.btnScrollDown)
         tvStatus = view.findViewById(R.id.tvStatus)
+        tvModelBadge = view.findViewById(R.id.tvModelBadge)
 
         progressOverlay = view.findViewById(R.id.progressOverlay)
         tvProgress = view.findViewById(R.id.tvProgress)
@@ -127,10 +132,30 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         }
     }
 
+    /**
+     * FIXED: Detect model path changes on resume and re-initialize.
+     * This handles the case where the user switches models from MoreFragment.
+     */
+    override fun onResume() {
+        super.onResume()
+        if (!::modelManager.isInitialized) return
+
+        val latestPath = modelManager.getModelPath()
+        if (currentModelPath != null && currentModelPath != latestPath && modelManager.isModelReady()) {
+            // Model was switched — reload
+            currentModelPath = latestPath
+            llmHelper?.close()
+            llmHelper = null
+            updateModelBadge()
+            initializeLlm()
+        }
+    }
+
     private fun checkAndInitModel() {
         if (modelManager.isModelReady()) {
             progressOverlay.visibility = View.GONE
             tvProgress.text = ""
+            updateModelBadge()
             initializeLlm()
         } else {
             progressOverlay.visibility = View.VISIBLE
@@ -139,19 +164,35 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             btnLoadModel.visibility = View.VISIBLE
             tvDownloadLink.visibility = View.VISIBLE
             progressBar.visibility = View.GONE
+            tvModelBadge.text = "No model"
         }
+    }
+
+    private fun updateModelBadge() {
+        val displayName = modelManager.getActiveModelDisplayName()
+        tvModelBadge.text = displayName
     }
 
     private fun loadModelFromUri(uri: Uri) {
         tvProgress.text = getString(R.string.initializing_copy)
-        // Hide buttons while copying
         btnLoadModel.visibility = View.GONE
         tvDownloadLink.visibility = View.GONE
         progressBar.visibility = View.VISIBLE
         progressOverlay.visibility = View.VISIBLE
 
         lifecycleScope.launch(Dispatchers.IO) {
-            val success = modelManager.copyModelFromUri(uri) { progress ->
+            // Extract original filename for model type detection
+            var originalFilename = "model.task"
+            requireContext().contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (nameIndex != -1) {
+                        originalFilename = cursor.getString(nameIndex) ?: "model.task"
+                    }
+                }
+            }
+
+            val success = modelManager.copyModelFromUri(uri, originalFilename) { progress ->
                 launch(Dispatchers.Main) {
                     tvProgress.text = getString(R.string.copying_model_progress, progress)
                 }
@@ -194,15 +235,32 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         tvStatus.text = getString(R.string.loading)
         tvStatus.setTextColor(0xFFFBBF24.toInt()) // amber while loading
 
+        currentModelPath = modelManager.getModelPath()
+
         lifecycleScope.launch(Dispatchers.Default) {
             try {
-                llmHelper = LlmHelper(requireContext(), modelManager.getModelPath())
-                llmHelper.initModel()
+                val helper = LlmHelper(requireContext(), currentModelPath!!)
+                helper.initModel()
+                llmHelper = helper
 
                 launch(Dispatchers.Main) {
                     tvStatus.text = getString(R.string.online)
                     tvStatus.setTextColor(0xFF22D3EE.toInt()) // cyan when ready
-                    chatAdapter.addMessage(getString(R.string.fish_ai_ready), false)
+                    updateModelBadge()
+
+                    // Show welcome message with suggested questions
+                    val modelName = modelManager.getActiveModelDisplayName()
+                    chatAdapter.addMessage(
+                        "🐟 **Fish AI** is ready! (Model: $modelName)\n\n" +
+                        "I can help you with:\n" +
+                        "• Fish species identification\n" +
+                        "• Weight & volume estimation\n" +
+                        "• Freshness assessment\n" +
+                        "• Protected species info\n" +
+                        "• Fishing regulations\n\n" +
+                        "Try asking: *\"Tell me about hilsa\"* or *\"How to check fish freshness?\"*",
+                        false
+                    )
                     rvChat.scrollToPosition(chatAdapter.itemCount - 1)
                     progressOverlay.visibility = View.GONE
                 }
@@ -221,8 +279,17 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     }
 
     private fun sendMessage(userText: String) {
+        if (llmHelper == null) {
+            Toast.makeText(context, "AI model not loaded yet", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         isGenerating = true
         btnSend.alpha = 0.5f
+
+        // Warn about restricted topics that the LLM will refuse
+        val restrictedPrefixes = listOf("catch", "kill", "hunt", "trap", "capture", "fish for", "catch a", "catch the", "can i catch")
+        val isRestrictedQuery = restrictedPrefixes.any { userText.lowercase().startsWith(it) }
 
         chatAdapter.addMessage(userText, true)
         rvChat.scrollToPosition(chatAdapter.itemCount - 1)
@@ -251,7 +318,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             }
 
             try {
-                llmHelper.generateResponse(userText).collect { partialString ->
+                llmHelper!!.generateResponse(userText).collect { partialString ->
                     // Remove typing indicator on first token (once)
                     if (!typingRemoved) {
                         typingRemoved = true
@@ -292,7 +359,22 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             withContext(Dispatchers.Main) {
                 mainHandler.removeCallbacks(flushRunnable)
                 val finalText = synchronized(buffer) { buffer.toString() }
-                chatAdapter.updateLastMessage(finalText)
+
+                // Handle empty response
+                val displayText = if (finalText.isBlank()) {
+                    "I couldn't generate a response. Please try rephrasing your question."
+                } else {
+                    finalText
+                }
+
+                // Append disclaimer to responses about fishing/catching
+                val finalTextWithDisclaimer = if (isRestrictedQuery && displayText.isNotBlank()) {
+                    "$displayText\n\n_⚠️ AI-assisted estimate only. Always comply with local fisheries regulations._"
+                } else {
+                    displayText
+                }
+
+                chatAdapter.updateLastMessage(finalTextWithDisclaimer)
                 rvChat.scrollToPosition(chatAdapter.itemCount - 1)
 
                 isGenerating = false
@@ -305,6 +387,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
 
     override fun onDestroy() {
         super.onDestroy()
-        try { llmHelper.close() } catch (e: Exception) {}
+        // FIXED: check nullability instead of lateinit — avoids UninitializedPropertyAccessException
+        try { llmHelper?.close() } catch (e: Exception) {}
     }
 }

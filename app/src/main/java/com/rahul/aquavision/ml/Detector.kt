@@ -23,6 +23,7 @@ class Detector(
     private val modelPath: String,
     private val labelPath: String,
     private var detectorListener: DetectorListener,
+    private val confidenceThreshold: Float = 0.55F
 ) {
 
     fun setListener(listener: DetectorListener) {
@@ -153,13 +154,240 @@ class Detector(
         }
     }
 
+    /**
+     * Per-class feature detection — exact port of Python's detect_features().
+     *
+     * IMPORTANT: The feature model was trained on EYE CLOSE-UP images.
+     * When given a full fish crop, it outputs LARGE anchors (w~0.6, h~0.9).
+     * This is EXPECTED — the model has no training signal for small-eye
+     * localization within a whole-fish photo.
+     *
+     * The large eye box is still used to crop the eye region for freshness.
+     * The low confidence (typically <0.05) gives the eye channel near-zero
+     * weight = 0.4 * eye_score ~= 0.0012, so gills + whole fish dominate.
+     * Per-class feature detection for the freshness pipeline.
+     *
+     * KEY DESIGN DECISION: size caps are ALWAYS enforced, even in fallback passes.
+     * The model was trained on eye close-up images so it fires large YOLO anchors
+     * on full-fish crops. We deliberately ignore those large anchors because:
+     *   - An eye cannot physically be >40% of the fish image in either dimension.
+     *   - A huge "eye" box fed to the freshness model produces worse results
+     *     than using the whole-fish baseline.
+     *
+     * Instead of removing the size filter (Python's _pick_no_size), we lower
+     * the confidence threshold progressively across 4 passes:
+     *   Pass 1: conf > 0.05,  size < maxW/maxH   (standard YOLO threshold)
+     *   Pass 2: conf > 0.01,  size < maxW/maxH   (float16 score compression)
+     *   Pass 3: conf > 0.001, size < maxW/maxH   (very weak signal still valid)
+     *   Pass 4: horizontal flip + repeat passes 1-3 (handles right-facing fish)
+     *
+     * If nothing found after all passes -> returns null for that feature.
+     * The freshness pipeline then uses gills + whole-fish baseline.
+     *
+     * Eye max:  w=0.40, h=0.40  (~left quarter of a typical fish crop)
+     * Gill max: w=0.70, h=0.70  (gill arch spans more of the fish body)
+     */
+    fun detectFeaturesPerClassSync(
+        frame: Bitmap,
+        eyeClassIdx: Int = 0,
+        gillClassIdx: Int = 1,
+        confThreshold: Float = 0.05f
+    ): Pair<BoundingBox?, BoundingBox?> {
+        if (tensorWidth == 0 || tensorHeight == 0 || numChannel == 0 || numElements == 0) {
+            return Pair(null, null)
+        }
+        return try {
+            val resizedBitmap = Bitmap.createScaledBitmap(frame, tensorWidth, tensorHeight, false)
+            val tensorImage = TensorImage(INPUT_IMAGE_TYPE)
+            tensorImage.load(resizedBitmap)
+            val processedImage = imageProcessor.process(tensorImage)
+            val output = TensorBuffer.createFixedSize(intArrayOf(1, numChannel, numElements), OUTPUT_IMAGE_TYPE)
+            interpreter.run(processedImage.buffer, output.buffer)
+            val array = output.floatArray
+
+
+            // ── Pass 1: Python _pick ─────────────────────────────────────────────
+            // score > confThreshold AND size < maxW/maxH (strict — no large boxes)
+            fun pick(arr: FloatArray, classIdx: Int, maxW: Float, maxH: Float): BoundingBox? {
+                var bestScore = confThreshold
+                var bestIdx   = -1
+                for (c in 0 until numElements) {
+                    val score = arr[c + numElements * (4 + classIdx)]
+                    if (score <= bestScore) continue
+                    var w = arr[c + numElements * 2]
+                    var h = arr[c + numElements * 3]
+                    if (w > 1.5f) w /= tensorWidth.toFloat()
+                    if (h > 1.5f) h /= tensorHeight.toFloat()
+                    if (w < maxW && h < maxH) { bestScore = score; bestIdx = c }
+                }
+                return anchorToBox(arr, bestIdx, classIdx, bestScore)
+            }
+
+            // ── Pass 2: Python _pick_no_size ─────────────────────────────────────
+            // NO size filter — exact port of Python.
+            // mask = scores > CONF_THRESH; idx = argmax(scores[mask]) else argmax(scores)
+            // Large boxes ARE returned here. The freshness pipeline weights them by
+            // confidence (weight = 0.4 * cnf) so a low-score eye barely contributes.
+            // The UI display layer separately filters out large/low-conf boxes.
+            fun pickNoSize(arr: FloatArray, classIdx: Int): BoundingBox? {
+                var bestScoreGated = confThreshold     // phase A: threshold-gated
+                var bestIdxGated   = -1
+                var bestScoreAll   = -Float.MAX_VALUE  // phase B: absolute argmax
+                var bestIdxAll     = 0
+                for (c in 0 until numElements) {
+                    val score = arr[c + numElements * (4 + classIdx)]
+                    if (score > bestScoreAll)   { bestScoreAll = score;   bestIdxAll   = c }
+                    if (score > bestScoreGated) { bestScoreGated = score; bestIdxGated = c }
+                }
+                return when {
+                    bestIdxGated >= 0     -> anchorToBox(arr, bestIdxGated, classIdx, bestScoreGated)
+                    bestScoreAll > 0.001f -> anchorToBox(arr, bestIdxAll,   classIdx, bestScoreAll)
+                    else -> null
+                }
+            }
+
+            // Passes 1 & 2 on original orientation (exact Python detect_features order)
+            var bestEye  = pick(array, eyeClassIdx,  0.4f, 0.4f) ?: pickNoSize(array, eyeClassIdx)
+            var bestGill = pick(array, gillClassIdx, 0.7f, 0.7f) ?: pickNoSize(array, gillClassIdx)
+
+            // Pass 3: horizontal flip fallback (handles right-facing fish)
+            if (bestEye == null || bestGill == null) {
+                val flippedArray = runFlippedInference(frame)
+                if (flippedArray != null) {
+                    if (bestEye  == null) bestEye  = (pick(flippedArray, eyeClassIdx,  0.4f, 0.4f) ?: pickNoSize(flippedArray, eyeClassIdx))?.let  { mirrorBox(it) }
+                    if (bestGill == null) bestGill = (pick(flippedArray, gillClassIdx, 0.7f, 0.7f) ?: pickNoSize(flippedArray, gillClassIdx))?.let { mirrorBox(it) }
+                }
+            }
+
+
+            Pair(bestEye, bestGill)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Pair(null, null)
+        }
+    }
+
+    /**
+     * Convert a raw anchor index to a BoundingBox with normalized coordinates.
+     */
+    private fun anchorToBox(array: FloatArray, anchorIdx: Int, classIdx: Int, score: Float): BoundingBox? {
+        if (anchorIdx < 0) return null
+
+        var cx = array[anchorIdx]
+        var cy = array[anchorIdx + numElements]
+        var w = array[anchorIdx + numElements * 2]
+        var h = array[anchorIdx + numElements * 3]
+
+        // Normalize if model outputs pixel coordinates
+        if (cx > 1.5f) cx /= tensorWidth.toFloat()
+        if (cy > 1.5f) cy /= tensorHeight.toFloat()
+        if (w > 1.5f) w /= tensorWidth.toFloat()
+        if (h > 1.5f) h /= tensorHeight.toFloat()
+
+        // Clamp to valid range
+        cx = cx.coerceIn(0f, 1f)
+        cy = cy.coerceIn(0f, 1f)
+        w = w.coerceAtLeast(0.01f)   // ensure minimum box size
+        h = h.coerceAtLeast(0.01f)
+
+        var x1 = (cx - w / 2f).coerceIn(0f, 1f)
+        var y1 = (cy - h / 2f).coerceIn(0f, 1f)
+        var x2 = (cx + w / 2f).coerceIn(0f, 1f)
+        var y2 = (cy + h / 2f).coerceIn(0f, 1f)
+
+        // Enforce minimum box size on screen (>1% of image)
+        if (x2 - x1 < 0.01f) x2 = (x1 + 0.01f).coerceAtMost(1f)
+        if (y2 - y1 < 0.01f) y2 = (y1 + 0.01f).coerceAtMost(1f)
+        if (x1 >= x2 || y1 >= y2) return null
+
+        val clsName = if (classIdx >= 0 && classIdx < labels.size) labels[classIdx] else "Unknown"
+        return BoundingBox(
+            x1 = x1, y1 = y1, x2 = x2, y2 = y2,
+            cx = cx, cy = cy, w = x2 - x1, h = y2 - y1,
+            cnf = score, cls = classIdx, clsName = clsName
+        )
+    }
+
+    // ── Flip-fallback helpers ─────────────────────────────────────────────────
+
+    /** Run inference on a horizontally-flipped version of the frame. */
+    private fun runFlippedInference(frame: Bitmap): FloatArray? {
+        return try {
+            val flippedMatrix = android.graphics.Matrix().apply { preScale(-1f, 1f) }
+            val flipped = Bitmap.createBitmap(frame, 0, 0, frame.width, frame.height, flippedMatrix, true)
+            val resized = Bitmap.createScaledBitmap(flipped, tensorWidth, tensorHeight, false)
+            val tensorImage = TensorImage(INPUT_IMAGE_TYPE)
+            tensorImage.load(resized)
+            val processedImage = imageProcessor.process(tensorImage)
+            val output = TensorBuffer.createFixedSize(intArrayOf(1, numChannel, numElements), OUTPUT_IMAGE_TYPE)
+            interpreter.run(processedImage.buffer, output.buffer)
+            output.floatArray
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /** Mirror a normalized box horizontally: x1' = 1 - x2, x2' = 1 - x1. */
+    private fun mirrorBox(box: BoundingBox): BoundingBox {
+        return box.copy(
+            x1 = 1f - box.x2,
+            x2 = 1f - box.x1,
+            cx = 1f - box.cx
+        )
+    }
+
+    /** Flip-fallback helper: mirrors Python's two-pass strategy on the flipped array. */
+    private fun pickBestFromArray(
+        array: FloatArray, classIdx: Int,
+        strictMaxW: Float, strictMaxH: Float
+    ): BoundingBox? {
+        val CONF_THRESHOLD = 0.05f
+        // Pass A: strict size + conf threshold (Python's _pick on flipped)
+        var bestScoreA = CONF_THRESHOLD
+        var bestIdxA   = -1
+        // Pass B: no size filter, no threshold gate (Python's _pick_no_size on flipped)
+        var bestScoreB = -Float.MAX_VALUE
+        var bestIdxB   = 0
+
+        for (c in 0 until numElements) {
+            val score = array[c + numElements * (4 + classIdx)]
+            var w = array[c + numElements * 2]
+            var h = array[c + numElements * 3]
+            if (w > 1.5f) w /= tensorWidth.toFloat()
+            if (h > 1.5f) h /= tensorHeight.toFloat()
+            if (score > bestScoreB) { bestScoreB = score; bestIdxB = c }
+            if (w < strictMaxW && h < strictMaxH && score > bestScoreA) { bestScoreA = score; bestIdxA = c }
+        }
+
+        return when {
+            bestIdxA >= 0 -> anchorToBox(array, bestIdxA, classIdx, bestScoreA)
+            bestScoreB > 0.001f -> anchorToBox(array, bestIdxB, classIdx, bestScoreB)
+            else -> null
+        }
+    }
+
+    fun detectSync(frame: Bitmap): List<BoundingBox>? {
+        if (tensorWidth == 0 || tensorHeight == 0 || numChannel == 0 || numElements == 0) return null
+        return try {
+            val resizedBitmap = Bitmap.createScaledBitmap(frame, tensorWidth, tensorHeight, false)
+            val tensorImage = TensorImage(INPUT_IMAGE_TYPE)
+            tensorImage.load(resizedBitmap)
+            val processedImage = imageProcessor.process(tensorImage)
+            val output = TensorBuffer.createFixedSize(intArrayOf(1, numChannel, numElements), OUTPUT_IMAGE_TYPE)
+            interpreter.run(processedImage.buffer, output.buffer)
+            bestBox(output.floatArray)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     private fun bestBox(array: FloatArray) : List<BoundingBox>? {
 
         val boundingBoxes = mutableListOf<BoundingBox>()
         val arraySize = array.size
 
         for (c in 0 until numElements) {
-            var maxConf = CONFIDENCE_THRESHOLD
+            var maxConf = confidenceThreshold
             var maxIdx = -1
             var j = 4
             var arrayIdx = c + numElements * j
@@ -173,20 +401,32 @@ class Detector(
                 arrayIdx += numElements
             }
 
-            if (maxConf > CONFIDENCE_THRESHOLD) {
+            if (maxConf > confidenceThreshold) {
                 val clsName = if (maxIdx >= 0 && maxIdx < labels.size) labels[maxIdx] else "Unknown"
-                val cx = array[c] // 0
-                val cy = array[c + numElements] // 1
-                val w = array[c + numElements * 2]
-                val h = array[c + numElements * 3]
-                val x1 = cx - (w/2F)
-                val y1 = cy - (h/2F)
-                val x2 = cx + (w/2F)
-                val y2 = cy + (h/2F)
-                if (x1 < 0F || x1 > 1F) continue
-                if (y1 < 0F || y1 > 1F) continue
-                if (x2 < 0F || x2 > 1F) continue
-                if (y2 < 0F || y2 > 1F) continue
+                var cx = array[c] // 0
+                var cy = array[c + numElements] // 1
+                var w = array[c + numElements * 2]
+                var h = array[c + numElements * 3]
+
+                // Auto-normalize if model outputs pixel coordinates (0-tensorWidth) instead of 0-1
+                if (cx > 1.5f || cy > 1.5f || w > 1.5f || h > 1.5f) {
+                    cx /= tensorWidth.toFloat()
+                    cy /= tensorHeight.toFloat()
+                    w /= tensorWidth.toFloat()
+                    h /= tensorHeight.toFloat()
+                }
+                var x1 = cx - (w/2F)
+                var y1 = cy - (h/2F)
+                var x2 = cx + (w/2F)
+                var y2 = cy + (h/2F)
+                
+                // Clamp to [0, 1] instead of discarding, since eyes/gills can be at the edge
+                x1 = Math.max(0F, Math.min(1F, x1))
+                y1 = Math.max(0F, Math.min(1F, y1))
+                x2 = Math.max(0F, Math.min(1F, x2))
+                y2 = Math.max(0F, Math.min(1F, y2))
+                
+                if (x1 >= x2 || y1 >= y2) continue
 
                 boundingBoxes.add(
                     BoundingBox(
@@ -221,8 +461,14 @@ class Detector(
                 val box = iterator.next()
                 val iou = calculateIoU(best, box)
                 // Gaussian decay: high IoU → big penalty, low IoU → almost no penalty
-                val decayedConf = box.cnf * Math.exp(-(iou * iou) / SOFT_NMS_SIGMA.toDouble()).toFloat()
-                if (decayedConf < CONFIDENCE_THRESHOLD) {
+                // Apply NMS decay ONLY if they belong to the same class
+                val decayedConf = if (best.cls == box.cls) {
+                    box.cnf * Math.exp(-(iou * iou) / SOFT_NMS_SIGMA.toDouble()).toFloat()
+                } else {
+                    box.cnf
+                }
+                
+                if (decayedConf < confidenceThreshold) {
                     iterator.remove()
                 } else {
                     iterator.set(box.copy(cnf = decayedConf))
@@ -254,7 +500,6 @@ class Detector(
         private const val INPUT_STANDARD_DEVIATION = 255f
         private val INPUT_IMAGE_TYPE = DataType.FLOAT32
         private val OUTPUT_IMAGE_TYPE = DataType.FLOAT32
-        private const val CONFIDENCE_THRESHOLD = 0.55F   // Raised from 0.4 → reject uncertain species guesses
         private const val IOU_THRESHOLD = 0.5F            // Lowered from 0.7 → suppress overlapping duplicates
         private const val SOFT_NMS_SIGMA = 0.5F           // Gaussian decay factor for Soft-NMS
     }
